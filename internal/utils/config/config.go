@@ -5,21 +5,22 @@ import (
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	LogMode string `env:"LOG_MODE env-required"`
+	LogMode string `env:"LOG_MODE" env-required:"true"`
 
 	EffectiveMobile EffectiveMobileConfig
 	Storage         StorageConfig
 }
 
 type EffectiveMobileConfig struct {
-	Host         string        `env:"SERVER_HOST env-required"`
-	Port         string        `env:"SERVER_PORT env-required"`
-	ReadTimeout  time.Duration `env:"SERVER_READTIMEOUT env-required"`
-	WriteTimeout time.Duration `env:"SERVER_WRITETIMEOUT env-required"`
-	IdleTimeout  time.Duration `env:"SERVER_IDLETIMEOUT env-required"`
+	Host         string        `env:"SERVER_HOST" env-required:"true"`
+	Port         string        `env:"SERVER_PORT" env-required:"true"`
+	ReadTimeout  time.Duration `env:"SERVER_READTIMEOUT" env-required:"true"`
+	WriteTimeout time.Duration `env:"SERVER_WRITETIMEOUT" env-required:"true"`
+	IdleTimeout  time.Duration `env:"SERVER_IDLETIMEOUT" env-required:"true"`
 }
 
 type StorageConfig struct {
@@ -35,9 +36,15 @@ func New() (Config, error) {
 
 	var config Config
 
-	err := cleanenv.ReadConfig(".env", &config)
+	err := godotenv.Load()
 	if err != nil {
 		return Config{}, fmt.Errorf("%s @ %v", op, err)
 	}
+
+	err = cleanenv.ReadEnv(&config)
+	if err != nil {
+		return Config{}, fmt.Errorf("%s @ %v", op, err)
+	}
+
 	return config, nil
 }

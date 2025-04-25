@@ -108,6 +108,11 @@ func (a *App) Run() {
 			slog.Any("error", err),
 		)
 	}
+	a.log.Log.Debug(
+		"выполнен gracefull shutdown",
+		slog.String("source", source),
+		slog.String("op", op),
+	)
 }
 
 func (a *App) shutdown() error {
