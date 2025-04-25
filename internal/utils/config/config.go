@@ -10,20 +10,23 @@ import (
 type Config struct {
 	LogMode string `env:"LOG_MODE env-required"`
 
-	Host        string        `env:"SERVER_HOST env-required"`
-	Port        string        `env:"SERVER_PORT env-required"`
-	ReadTimeout time.Duration `env:"SERVER_READTIMEOUT env-required"`
-	WriteTemout time.Duration `env:"SERVER_WRITETIMEOUT env-required"`
-	IdleTime    time.Duration `env:"SERVER_IDLETIMEOUT env-required"`
-
-	Storage Storage
+	EffectiveMobile EffectiveMobileConfig
+	Storage         StorageConfig
 }
 
-type Storage struct {
-	PostgreSQL PostgreSQL
+type EffectiveMobileConfig struct {
+	Host         string        `env:"SERVER_HOST env-required"`
+	Port         string        `env:"SERVER_PORT env-required"`
+	ReadTimeout  time.Duration `env:"SERVER_READTIMEOUT env-required"`
+	WriteTimeout time.Duration `env:"SERVER_WRITETIMEOUT env-required"`
+	IdleTimeout  time.Duration `env:"SERVER_IDLETIMEOUT env-required"`
 }
 
-type PostgreSQL struct {
+type StorageConfig struct {
+	PostgreSQL PostgreSQLConfig
+}
+
+type PostgreSQLConfig struct {
 	// TODO
 }
 

@@ -57,7 +57,7 @@ func New(logMode string) (*Logger, error) {
 		))
 
 	default:
-		return nil, fmt.Errorf("%s @ error: logModeironment is unknown", op)
+		return nil, fmt.Errorf("%s @ error: log mode is unknown", op)
 	}
 
 	return &Logger{
@@ -67,8 +67,14 @@ func New(logMode string) (*Logger, error) {
 	}, nil
 }
 
-func (l *Logger) Shutdown() {
+func (l *Logger) Shutdown() error {
+	const op = "logger.Shutdown()"
+
 	if l.file != nil {
-		l.file.Close()
+		err := l.file.Close()
+		if err != nil {
+			return fmt.Errorf("%s @ %v", op, err)
+		}
 	}
+	return nil
 }

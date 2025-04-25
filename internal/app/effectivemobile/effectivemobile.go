@@ -3,15 +3,18 @@ package effectivemobile
 import (
 	"errors"
 	"fmt"
+	"log/slog"
+	"net"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/xoticdsign/effectivemobile/internal/utils/config"
 )
 
 type App struct {
 	Server Server
 
-	// log *slog.Logger
-	// config utils.Config
+	log    *slog.Logger
+	config config.EffectiveMobileConfig
 }
 
 type Handlerer interface{}
@@ -21,11 +24,11 @@ type Server struct {
 	Handlers       Handlerer
 }
 
-func New( /* config utils.Config, log *slog.Logger */ ) App {
+func New(config config.EffectiveMobileConfig, log *slog.Logger) *App {
 	f := fiber.New(fiber.Config{
-		// ReadTimeout: ,
-		// WriteTimeout: ,
-		// IdleTimeout: ,
+		ReadTimeout:  config.ReadTimeout,
+		WriteTimeout: config.WriteTimeout,
+		IdleTimeout:  config.IdleTimeout,
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			var e *fiber.Error
 
@@ -37,25 +40,33 @@ func New( /* config utils.Config, log *slog.Logger */ ) App {
 		AppName: "effectivemobile",
 	})
 
-	return App{
+	return &App{
 		Server: Server{
 			Implementation: f,
-			Handlers:       handlers{ /* Service: effectivemobileservice.New() */ },
+			Handlers: handlers{
+				/* Service: effectivemobileservice.New() */
+
+				log:    log,
+				config: config,
+			},
 		},
+
+		log:    log,
+		config: config,
 	}
 }
 
-func (a App) Run() error {
+func (a *App) Run() error {
 	const op = "effectivemobile.Run()"
 
-	err := a.Server.Implementation.Listen( /* config. */ )
+	err := a.Server.Implementation.Listen(net.JoinHostPort(a.config.Host, a.config.Port))
 	if err != nil {
 		return fmt.Errorf("%s @ %v", op, err)
 	}
 	return nil
 }
 
-func (a App) Shutdown() error {
+func (a *App) Shutdown() error {
 	const op = "effectivemobile.Shutdown()"
 
 	err := a.Server.Implementation.Shutdown()
@@ -69,6 +80,9 @@ type handlers struct {
 	UnimplementedHandlers
 
 	// Service effectivemobileservice.Service
+
+	log    *slog.Logger
+	config config.EffectiveMobileConfig
 }
 
 type UnimplementedHandlers struct{}
