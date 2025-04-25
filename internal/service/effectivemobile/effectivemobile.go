@@ -1,6 +1,9 @@
 package effectivemobile
 
 import (
+	"database/sql"
+	"errors"
+	"fmt"
 	"log/slog"
 
 	storage "github.com/xoticdsign/effectivemobile/internal/storage/postgresql"
@@ -58,10 +61,28 @@ type handlers struct {
 }
 
 func (h handlers) DeleteByID(id string) error {
+	const op = "service.DeleteByID()"
+
+	h.log.Debug(
+		"данные получены сервисным слоем",
+		slog.String("source", source),
+		slog.String("op", op),
+		slog.Any("data", []string{id}),
+	)
+
 	err := h.Storage.DeleteByID(id)
 	if err != nil {
-		// ERROR HANDLING
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("%s.%w", op, sql.ErrNoRows)
+		}
+		return fmt.Errorf("%s.%v", op, err)
 	}
+	h.log.Debug(
+		"данные обработаны сервисным слоем",
+		slog.String("source", source),
+		slog.String("op", op),
+	)
+
 	return nil
 }
 

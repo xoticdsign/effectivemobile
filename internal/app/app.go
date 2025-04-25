@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	effectivemobileapp "github.com/xoticdsign/effectivemobile/internal/app/effectivemobile"
 	"github.com/xoticdsign/effectivemobile/internal/lib/logger"
@@ -75,7 +74,7 @@ func (a *App) Run() {
 
 	errChan := make(chan error, 1)
 
-	a.log.Log.Debug(
+	a.log.Log.Info(
 		"запуск сервера",
 		slog.String("source", source),
 		slog.String("op", op),
@@ -88,9 +87,7 @@ func (a *App) Run() {
 		}
 	}()
 
-	time.Sleep(time.Second * 1)
-
-	a.log.Log.Debug(
+	a.log.Log.Info(
 		"сервер запущен",
 		slog.String("source", source),
 		slog.String("op", op),
@@ -114,7 +111,7 @@ func (a *App) Run() {
 		)
 	}
 
-	a.log.Log.Debug(
+	a.log.Log.Info(
 		"попытка выполнить gracefull shutdown",
 		slog.String("source", source),
 		slog.String("op", op),
@@ -129,7 +126,7 @@ func (a *App) Run() {
 			slog.Any("error", err),
 		)
 	}
-	a.log.Log.Debug(
+	a.log.Log.Info(
 		"выполнен gracefull shutdown",
 		slog.String("source", source),
 		slog.String("op", op),

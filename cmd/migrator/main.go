@@ -33,7 +33,23 @@ func main() {
 		panic(err)
 	}
 
-	m, err := migrate.New("file://"+config.MigrationsPath, fmt.Sprintf("%s&&x-migrations-table=%s", config.Storage.PostgreSQL.Address, config.MigrationsTable))
+	var conn string
+
+	switch {
+	case config.Storage.PostgreSQL.Password == "":
+		conn = fmt.Sprintf("postgres://%s@%s:%s/%s?sslmode=%s&&x-migrations-table=%s&&%s", config.Storage.PostgreSQL.Username, config.Storage.PostgreSQL.Host, config.Storage.PostgreSQL.Port, config.Storage.PostgreSQL.Database, config.Storage.PostgreSQL.SSL, config.MigrationsTable, config.Storage.PostgreSQL.Extra)
+
+	case config.Storage.PostgreSQL.Extra == "":
+		conn = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s&&x-migrations-table=%s", config.Storage.PostgreSQL.Username, config.Storage.PostgreSQL.Password, config.Storage.PostgreSQL.Host, config.Storage.PostgreSQL.Port, config.Storage.PostgreSQL.Database, config.Storage.PostgreSQL.SSL, config.MigrationsTable)
+
+	case config.Storage.PostgreSQL.Password == "" && config.Storage.PostgreSQL.Extra == "":
+		conn = fmt.Sprintf("postgres://%s@%s:%s/%s?sslmode=%s&&x-migrations-table=%s", config.Storage.PostgreSQL.Username, config.Storage.PostgreSQL.Host, config.Storage.PostgreSQL.Port, config.Storage.PostgreSQL.Database, config.Storage.PostgreSQL.SSL, config.MigrationsTable)
+
+	default:
+		conn = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s&&x-migrations-table=%s&&%s", config.Storage.PostgreSQL.Username, config.Storage.PostgreSQL.Password, config.Storage.PostgreSQL.Host, config.Storage.PostgreSQL.Port, config.Storage.PostgreSQL.Database, config.Storage.PostgreSQL.SSL, config.MigrationsTable, config.Storage.PostgreSQL.Extra)
+	}
+
+	m, err := migrate.New("file://"+config.MigrationsPath, conn)
 	if err != nil {
 		log.Log.Error(
 			"невозможно инициализировать мигратор",
@@ -53,7 +69,7 @@ func main() {
 
 	switch config.MigrationsDirection {
 	case directionUp:
-		log.Log.Debug(
+		log.Log.Info(
 			"миграция вверх",
 			slog.String("source", source),
 			slog.String("op", op),
@@ -80,7 +96,7 @@ func main() {
 		}
 
 	case directionDown:
-		log.Log.Debug(
+		log.Log.Info(
 			"миграция вниз",
 			slog.String("source", source),
 			slog.String("op", op),

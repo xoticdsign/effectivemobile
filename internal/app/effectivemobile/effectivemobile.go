@@ -1,12 +1,14 @@
 package effectivemobile
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net"
 
 	"github.com/gofiber/fiber/v2"
+
 	effectivemobileservice "github.com/xoticdsign/effectivemobile/internal/service/effectivemobile"
 	storage "github.com/xoticdsign/effectivemobile/internal/storage/postgresql"
 	"github.com/xoticdsign/effectivemobile/internal/utils/config"
@@ -108,10 +110,44 @@ type handlers struct {
 }
 
 func (h handlers) DeleteByID(c *fiber.Ctx) error {
-	err := h.Service.DeleteByID(c.Params("id"))
+	const op = "effectivemobile.DeleteByID()"
+
+	id := c.Params("id")
+
+	h.log.Debug(
+		"получен запрос на удаление",
+		slog.String("source", source),
+		slog.String("op", op),
+		slog.Any("parameters", id),
+	)
+
+	err := h.Service.DeleteByID(id)
 	if err != nil {
-		// ERROR HANDLING
+		if errors.Is(err, sql.ErrNoRows) {
+			h.log.Error(
+				"ошибка в базе данных",
+				slog.String("source", source),
+				slog.String("op", op),
+				slog.Any("error", err),
+			)
+
+			return fiber.ErrNotFound
+		}
+		h.log.Error(
+			"внутрення ошибка",
+			slog.String("source", source),
+			slog.String("op", op),
+			slog.Any("error", err),
+		)
+
+		return fiber.ErrInternalServerError
 	}
+	h.log.Debug(
+		"обработан запрос на удаление",
+		slog.String("source", source),
+		slog.String("op", op),
+	)
+
 	return nil
 }
 

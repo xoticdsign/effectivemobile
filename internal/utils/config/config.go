@@ -33,7 +33,13 @@ type StorageConfig struct {
 }
 
 type PostgreSQLConfig struct {
-	Address string `env:"POSTGRESQL_ADDRESS" env-required:"true" env-description:"Адрес PostgreSQL"`
+	Username string `env:"POSTGRESQL_USERNAME" env-required:"true" env-description:"Имя пользователя PostgreSQL"`
+	Password string `env:"POSTGRESQL_PASSWORD" env-description:"Пароль PostgreSQL"`
+	Host     string `env:"POSTGRESQL_HOST" env-required:"true" env-description:"Имя хоста PostgreSQL"`
+	Port     string `env:"POSTGRESQL_PORT" env-required:"true" env-description:"Порт PostgreSQL"`
+	Database string `env:"POSTGRESQL_DBNAME" env-required:"true" env-description:"БД PostgreSQL"`
+	SSL      string `env:"POSTGRESQL_SSLMODE" env-required:"true" env-description:"Режим SSL PostgreSQL"`
+	Extra    string `env:"POSTGRESQL_EXTRA" env-description:"Дополнительные опции PostgreSQL"`
 }
 
 func New() (Config, error) {
