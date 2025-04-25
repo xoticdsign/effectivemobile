@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -10,16 +9,10 @@ import (
 )
 
 type Logger struct {
-	Log  *slog.Logger
-	File *os.File
+	Log *slog.Logger
+
+	file *os.File
 }
-
-type silentHandler struct{}
-
-func (s silentHandler) Enabled(_ context.Context, _ slog.Level) bool  { return false }
-func (s silentHandler) Handle(_ context.Context, _ slog.Record) error { return nil }
-func (s silentHandler) WithAttrs(_ []slog.Attr) slog.Handler          { return s }
-func (s silentHandler) WithGroup(_ string) slog.Handler               { return s }
 
 func New(logMode string) (*Logger, error) {
 	const op = "logger.New()"
@@ -29,9 +22,6 @@ func New(logMode string) (*Logger, error) {
 	var err error
 
 	switch logMode {
-	case "silent":
-		log = slog.New(silentHandler{})
-
 	case "local":
 		log = slog.New(slog.NewTextHandler(
 			os.Stdout,
@@ -71,13 +61,14 @@ func New(logMode string) (*Logger, error) {
 	}
 
 	return &Logger{
-		Log:  log,
-		File: file,
+		Log: log,
+
+		file: file,
 	}, nil
 }
 
 func (l *Logger) Shutdown() {
-	if l.File != nil {
-		l.File.Close()
+	if l.file != nil {
+		l.file.Close()
 	}
 }
