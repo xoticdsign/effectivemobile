@@ -7,6 +7,7 @@ import (
 	"net"
 
 	"github.com/gofiber/fiber/v2"
+	effectivemobileservice "github.com/xoticdsign/effectivemobile/internal/service/effectivemobile"
 	"github.com/xoticdsign/effectivemobile/internal/utils/config"
 )
 
@@ -44,7 +45,7 @@ func New(config config.EffectiveMobileConfig, log *slog.Logger) *App {
 		Server: Server{
 			Implementation: f,
 			Handlers: handlers{
-				/* Service: effectivemobileservice.New() */
+				Service: effectivemobileservice.New(config, log),
 
 				log:    log,
 				config: config,
@@ -76,13 +77,17 @@ func (a *App) Shutdown() error {
 	return nil
 }
 
+type Servicer interface{}
+
 type handlers struct {
 	UnimplementedHandlers
 
-	// Service effectivemobileservice.Service
+	Service Servicer
 
 	log    *slog.Logger
 	config config.EffectiveMobileConfig
 }
+
+// МОКИ
 
 type UnimplementedHandlers struct{}
