@@ -21,14 +21,14 @@ func (s silentHandler) Handle(_ context.Context, _ slog.Record) error { return n
 func (s silentHandler) WithAttrs(_ []slog.Attr) slog.Handler          { return s }
 func (s silentHandler) WithGroup(_ string) slog.Handler               { return s }
 
-func New(env string) (*Logger, error) {
+func New(logMode string) (*Logger, error) {
 	const op = "logger.New()"
 
 	var log *slog.Logger
 	var file *os.File
 	var err error
 
-	switch env {
+	switch logMode {
 	case "silent":
 		log = slog.New(silentHandler{})
 
@@ -67,7 +67,7 @@ func New(env string) (*Logger, error) {
 		))
 
 	default:
-		return nil, fmt.Errorf("%s @ error: environment is unknown", op)
+		return nil, fmt.Errorf("%s @ error: logModeironment is unknown", op)
 	}
 
 	return &Logger{
