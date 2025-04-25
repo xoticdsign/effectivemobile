@@ -1,3 +1,5 @@
 # TRASH ##
 
 *.DS_Store
+
+/internal/app/effectivemobile
