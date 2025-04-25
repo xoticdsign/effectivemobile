@@ -34,9 +34,13 @@ test:
 # GO ###
 
 EFFECTIVEMOBILE := cmd/effectivemobile/main.go 
+MIGRATOR := cmd/migrator/main.go
 
 run:
 	go run $(EFFECTIVEMOBILE)
+
+migrate:
+	go run $(MIGRATOR)
 
 build:
 	go build -o build/effectivemobile $(EFFECTIVEMOBILE)

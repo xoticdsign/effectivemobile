@@ -1,0 +1,3 @@
+DROP INDEX IF EXISTS idx_name;
+DROP INDEX IF EXISTS idx_age;
+DROP INDEX IF EXISTS idx_nationality;

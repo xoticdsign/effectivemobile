@@ -12,6 +12,7 @@ import (
 type Config struct {
 	MigrationsPath      string `env:"MIGRATIONS_PATH" env-required:"true" env-description:"Путь до миграций"`
 	MigrationsDirection string `env:"MIGRATIONS_DIRECTION" env-required:"true" env-description:"Направление миграций"`
+	MigrationsTable     string `env:"MIGRATIONS_TABLE" env-required:"true" env-description:"Таблица миграций"`
 
 	LogMode string `env:"LOG_MODE" env-required:"true" env-description:"Режим логгирования (local, dev, prod)"`
 

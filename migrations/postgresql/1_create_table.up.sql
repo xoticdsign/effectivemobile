@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS people (id BIGSERIAL PRIMARY KEY, name VARCHAR(100) NOT NULL, surname VARCHAR(100) NOT NULL, patronymic VARCHAR(100), age INTEGER NOT NULL, gender VARCHAR(6) NOT NULL CHECK(gender IN ('female', 'male', 'Female', 'Male')) , nationality VARCHAR(100) NOT NULL);

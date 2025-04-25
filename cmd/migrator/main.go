@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -32,7 +33,7 @@ func main() {
 		panic(err)
 	}
 
-	m, err := migrate.New("file://"+config.MigrationsPath, config.Storage.PostgreSQL.Address)
+	m, err := migrate.New("file://"+config.MigrationsPath, fmt.Sprintf("%s&&x-migrations-table=%s", config.Storage.PostgreSQL.Address, config.MigrationsTable))
 	if err != nil {
 		log.Log.Error(
 			"невозможно инициализировать мигратор",
@@ -44,7 +45,7 @@ func main() {
 		panic(err)
 	}
 
-	log.Log.Info(
+	log.Log.Debug(
 		"начинается миграция",
 		slog.String("source", source),
 		slog.String("op", op),
@@ -52,11 +53,17 @@ func main() {
 
 	switch config.MigrationsDirection {
 	case directionUp:
+		log.Log.Debug(
+			"миграция вверх",
+			slog.String("source", source),
+			slog.String("op", op),
+		)
+
 		err := m.Up()
 		if err != nil {
 			if errors.Is(err, migrate.ErrNoChange) {
-				log.Log.Info(
-					"нечего мигрировать",
+				log.Log.Warn(
+					"нечего мигрировать или отсутствуют файлы миграций",
 					slog.String("source", source),
 					slog.String("op", op),
 				)
@@ -73,11 +80,17 @@ func main() {
 		}
 
 	case directionDown:
+		log.Log.Debug(
+			"миграция вниз",
+			slog.String("source", source),
+			slog.String("op", op),
+		)
+
 		err := m.Down()
 		if err != nil {
 			if errors.Is(err, migrate.ErrNoChange) {
-				log.Log.Info(
-					"нечего мигрировать",
+				log.Log.Warn(
+					"нечего мигрировать или отсутствуют файлы миграций",
 					slog.String("source", source),
 					slog.String("op", op),
 				)
