@@ -10,6 +10,7 @@ import (
 
 	effectivemobileapp "github.com/xoticdsign/effectivemobile/internal/app/effectivemobile"
 	"github.com/xoticdsign/effectivemobile/internal/lib/logger"
+	storage "github.com/xoticdsign/effectivemobile/internal/storage/postgresql"
 	"github.com/xoticdsign/effectivemobile/internal/utils/config"
 )
 
@@ -17,6 +18,7 @@ const source = "app"
 
 type App struct {
 	EffectiveMobile *effectivemobileapp.App
+	Storage         *storage.Storage
 
 	log    *logger.Logger
 	config config.Config
@@ -35,10 +37,16 @@ func New() (*App, error) {
 		return nil, fmt.Errorf("%s.%v", op, err)
 	}
 
-	emapp := effectivemobileapp.New(config.EffectiveMobile, log.Log)
+	storage, err := storage.New(config.Storage.PostgreSQL, log.Log)
+	if err != nil {
+		return nil, fmt.Errorf("%s.%v", op, err)
+	}
+
+	emapp := effectivemobileapp.New(config.EffectiveMobile, storage, log.Log)
 
 	return &App{
 		EffectiveMobile: emapp,
+		Storage:         storage,
 
 		log:    log,
 		config: config,
@@ -118,12 +126,35 @@ func (a *App) Run() {
 func (a *App) shutdown() error {
 	const op = "app.shutdown()"
 
-	err := a.EffectiveMobile.Shutdown()
+	a.log.Log.Debug(
+		"gracefull shutdown для храналища",
+		slog.String("source", source),
+		slog.String("op", op),
+	)
+
+	err := a.Storage.Shutdown()
 	if err != nil {
 		return fmt.Errorf("%s.%v", op, err)
 	}
 
+	a.log.Log.Debug(
+		"shutdown для логов",
+		slog.String("source", source),
+		slog.String("op", op),
+	)
+
 	err = a.log.Shutdown()
+	if err != nil {
+		return fmt.Errorf("%s.%v", op, err)
+	}
+
+	a.log.Log.Debug(
+		"gracefull shutdown для effectivemobile",
+		slog.String("source", source),
+		slog.String("op", op),
+	)
+
+	err = a.EffectiveMobile.Shutdown()
 	if err != nil {
 		return fmt.Errorf("%s.%v", op, err)
 	}

@@ -8,8 +8,11 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	effectivemobileservice "github.com/xoticdsign/effectivemobile/internal/service/effectivemobile"
+	storage "github.com/xoticdsign/effectivemobile/internal/storage/postgresql"
 	"github.com/xoticdsign/effectivemobile/internal/utils/config"
 )
+
+const source = "effectivemobile"
 
 type App struct {
 	Server Server
@@ -25,7 +28,7 @@ type Server struct {
 	Handlers       Handlerer
 }
 
-func New(config config.EffectiveMobileConfig, log *slog.Logger) *App {
+func New(config config.EffectiveMobileConfig, storage *storage.Storage, log *slog.Logger) *App {
 	f := fiber.New(fiber.Config{
 		ReadTimeout:  config.ReadTimeout,
 		WriteTimeout: config.WriteTimeout,
@@ -45,7 +48,7 @@ func New(config config.EffectiveMobileConfig, log *slog.Logger) *App {
 		Server: Server{
 			Implementation: f,
 			Handlers: handlers{
-				Service: effectivemobileservice.New(config, log),
+				Service: effectivemobileservice.New(config, storage, log),
 
 				log:    log,
 				config: config,

@@ -29,7 +29,7 @@ type StorageConfig struct {
 }
 
 type PostgreSQLConfig struct {
-	// TODO
+	Address string `env:"POSTGRESQL_ADDRESS" env-required:"true" env-description:"Адрес PostgreSQL (строка или адрес)"`
 }
 
 func New() (Config, error) {
