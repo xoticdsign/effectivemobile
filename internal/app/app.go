@@ -37,10 +37,24 @@ func New() (*App, error) {
 		return nil, fmt.Errorf("%s.%v", op, err)
 	}
 
+	log.Log.Debug(
+		"инициализация хранилища",
+		slog.String("source", source),
+		slog.String("op", op),
+		slog.Any("config", config.Storage.PostgreSQL),
+	)
+
 	storage, err := storage.New(config.Storage.PostgreSQL, log.Log)
 	if err != nil {
 		return nil, fmt.Errorf("%s.%v", op, err)
 	}
+
+	log.Log.Debug(
+		"инициализация effectivemobile",
+		slog.String("source", source),
+		slog.String("op", op),
+		slog.Any("config", config.EffectiveMobile),
+	)
 
 	emapp := effectivemobileapp.New(config.EffectiveMobile, storage, log.Log)
 
@@ -65,7 +79,6 @@ func (a *App) Run() {
 		"запуск сервера",
 		slog.String("source", source),
 		slog.String("op", op),
-		slog.Any("config", a.config.EffectiveMobile),
 	)
 
 	go func() {

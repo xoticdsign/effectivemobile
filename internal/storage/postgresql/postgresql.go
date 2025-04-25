@@ -26,6 +26,11 @@ func New(config config.PostgreSQLConfig, log *slog.Logger) (*Storage, error) {
 		return nil, fmt.Errorf("%s @ %v", op, err)
 	}
 
+	err = db.Ping()
+	if err != nil {
+		return nil, fmt.Errorf("%s @ %v", op, err)
+	}
+
 	return &Storage{
 		DB: db,
 
