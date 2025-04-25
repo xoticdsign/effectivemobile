@@ -21,7 +21,11 @@ type App struct {
 	config config.EffectiveMobileConfig
 }
 
-type Handlerer interface{}
+type Handlerer interface {
+	DeleteByID(c *fiber.Ctx) error
+	UpdateByID(c *fiber.Ctx) error
+	Create(c *fiber.Ctx) error
+}
 
 type Server struct {
 	Implementation *fiber.App
@@ -44,15 +48,23 @@ func New(config config.EffectiveMobileConfig, storage *storage.Storage, log *slo
 		AppName: "effectivemobile",
 	})
 
+	emservice := effectivemobileservice.New(config, storage, log)
+
+	h := handlers{
+		Service: emservice.S.Handlers,
+
+		log:    log,
+		config: config,
+	}
+
+	f.Delete("/delete/:id", h.DeleteByID)
+	f.Put("/update/:id", h.UpdateByID)
+	f.Post("/create")
+
 	return &App{
 		Server: Server{
 			Implementation: f,
-			Handlers: handlers{
-				Service: effectivemobileservice.New(config, storage, log),
-
-				log:    log,
-				config: config,
-			},
+			Handlers:       h,
 		},
 
 		log:    log,
@@ -80,7 +92,11 @@ func (a *App) Shutdown() error {
 	return nil
 }
 
-type Servicer interface{}
+type Servicer interface {
+	DeleteByID(id string) error
+	UpdateByID(id string) error
+	Create(name string, surname string, patronymic string) error
+}
 
 type handlers struct {
 	UnimplementedHandlers
@@ -91,6 +107,56 @@ type handlers struct {
 	config config.EffectiveMobileConfig
 }
 
+func (h handlers) DeleteByID(c *fiber.Ctx) error {
+	err := h.Service.DeleteByID(c.Params("id"))
+	if err != nil {
+		// ERROR HANDLING
+	}
+	return nil
+}
+
+func (h handlers) UpdateByID(c *fiber.Ctx) error {
+	err := h.Service.UpdateByID(c.Params("id"))
+	if err != nil {
+		// ERROR HANDLING
+	}
+	return nil
+}
+
+type CreateRequest struct {
+	Name       string `json:"name"`
+	Surname    string `json:"surname"`
+	Patronymic string `json:"patronymic"`
+}
+
+func (h handlers) Create(c *fiber.Ctx) error {
+	var body CreateRequest
+
+	err := c.BodyParser(&body)
+	if err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	err = h.Service.Create(body.Name, body.Surname, body.Patronymic)
+	if err != nil {
+		// ERROR HANDLING
+	}
+
+	return nil
+}
+
 // МОКИ
 
 type UnimplementedHandlers struct{}
+
+func (u UnimplementedHandlers) DeleteByID(c *fiber.Ctx) error {
+	return nil
+}
+
+func (h UnimplementedHandlers) UpdateByID(c *fiber.Ctx) error {
+	return nil
+}
+
+func (h UnimplementedHandlers) Create(c *fiber.Ctx) error {
+	return nil
+}

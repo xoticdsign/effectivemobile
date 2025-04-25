@@ -9,10 +9,47 @@ import (
 
 const source = "effectivemobile"
 
-type Querier interface{}
-
 type Service struct {
-	UnimplementedService
+	S S
+
+	log    *slog.Logger
+	config config.EffectiveMobileConfig
+}
+
+type Handlerer interface {
+	DeleteByID(id string) error
+	UpdateByID(id string) error
+	Create(name string, surname string, patronymic string) error
+}
+
+type S struct {
+	Handlers Handlerer
+}
+
+func New(config config.EffectiveMobileConfig, storage *storage.Storage, log *slog.Logger) *Service {
+	return &Service{
+		S: S{
+			Handlers: handlers{
+				Storage: storage.DB.Handlers,
+
+				log:    log,
+				config: config,
+			},
+		},
+
+		log:    log,
+		config: config,
+	}
+}
+
+type Querier interface {
+	DeleteByID(id string) error
+	UpdateByID(id string) error
+	Create(name string, surname string, patronymic string) error
+}
+
+type handlers struct {
+	UnimplementedHandlers
 
 	Storage Querier
 
@@ -20,15 +57,42 @@ type Service struct {
 	config config.EffectiveMobileConfig
 }
 
-func New(config config.EffectiveMobileConfig, storage *storage.Storage, log *slog.Logger) *Service {
-	return &Service{
-		Storage: storage,
-
-		log:    log,
-		config: config,
+func (h handlers) DeleteByID(id string) error {
+	err := h.Storage.DeleteByID(id)
+	if err != nil {
+		// ERROR HANDLING
 	}
+	return nil
+}
+
+func (h handlers) UpdateByID(id string) error {
+	err := h.Storage.UpdateByID(id)
+	if err != nil {
+		// ERROR HANDLING
+	}
+	return nil
+}
+
+func (h handlers) Create(name string, surname string, patronymic string) error {
+	// MAKE REQUEST TO OPEN API
+
+	// SEND DATA TO DB
+
+	return nil
 }
 
 // МОКИ
 
-type UnimplementedService struct{}
+type UnimplementedHandlers struct{}
+
+func (u UnimplementedHandlers) DeleteByID(id string) error {
+	return nil
+}
+
+func (u UnimplementedHandlers) UpdateByID(id string) error {
+	return nil
+}
+
+func (u UnimplementedHandlers) Create(name string, surname string, patronymic string) error {
+	return nil
+}
