@@ -5,3 +5,7 @@
 # LOCATIONS ##
 
 /log
+
+# FILES ######
+
+/build/*

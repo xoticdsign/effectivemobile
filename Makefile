@@ -30,3 +30,13 @@ test:
 		functional) go test -v -run _Functional ./internal/tests ;; \
 		integration) go test -v -run _Integration ./internal/tests ;; \
 	esac
+
+# GO ###
+
+EFFECTIVEMOBILE := cmd/effectivemobile/main.go 
+
+run:
+	go run $(EFFECTIVEMOBILE)
+
+build:
+	go build -o build/effectivemobile $(EFFECTIVEMOBILE)
