@@ -33,7 +33,7 @@ func New(logMode string) (*Logger, error) {
 	case "dev":
 		file, err = utils.GetLogFile("log/dev/dev.log.json")
 		if err != nil {
-			return nil, fmt.Errorf("%s.%v", op, err)
+			return nil, err
 		}
 
 		log = slog.New(slog.NewJSONHandler(
@@ -46,7 +46,7 @@ func New(logMode string) (*Logger, error) {
 	case "prod":
 		file, err = utils.GetLogFile("log/log.json")
 		if err != nil {
-			return nil, fmt.Errorf("%s.%v", op, err)
+			return nil, err
 		}
 
 		log = slog.New(slog.NewJSONHandler(
@@ -57,7 +57,7 @@ func New(logMode string) (*Logger, error) {
 		))
 
 	default:
-		return nil, fmt.Errorf("%s @ error: log mode is unknown", op)
+		return nil, fmt.Errorf("log mode is unknown")
 	}
 
 	return &Logger{
@@ -73,7 +73,7 @@ func (l *Logger) Shutdown() error {
 	if l.file != nil {
 		err := l.file.Close()
 		if err != nil {
-			return fmt.Errorf("%s @ %v", op, err)
+			return err
 		}
 	}
 	return nil

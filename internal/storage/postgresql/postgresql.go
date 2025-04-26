@@ -2,13 +2,19 @@ package postgresql
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	_ "github.com/lib/pq"
 
-	"github.com/xoticdsign/effectivemobile/internal/utils"
 	"github.com/xoticdsign/effectivemobile/internal/utils/config"
+)
+
+var (
+	ErrNoNewValues              = fmt.Errorf("в запросе не были предотавлены новые данные")
+	ErrOperationDidNotSuccessed = fmt.Errorf("операция не была выполнена")
 )
 
 const source = "postgresql"
@@ -22,8 +28,8 @@ type Storage struct {
 
 type Handlerer interface {
 	DeleteByID(id string) error
-	UpdateByID(id string) error
-	Create(name string, surname string, patronymic string) error
+	UpdateByID(id string, data []byte) error
+	Create(name string, surname string, patronymic string, age int, gender string, nationality string) error
 }
 
 type DB struct {
@@ -52,12 +58,12 @@ func New(config config.PostgreSQLConfig, log *slog.Logger) (*Storage, error) {
 
 	db, err := sql.Open("postgres", conn)
 	if err != nil {
-		return nil, fmt.Errorf("%s @ %v", op, err)
+		return nil, err
 	}
 
 	err = db.Ping()
 	if err != nil {
-		return nil, fmt.Errorf("%s @ %v", op, err)
+		return nil, err
 	}
 
 	return &Storage{
@@ -81,9 +87,18 @@ func (s *Storage) Shutdown() error {
 
 	err := s.DB.Implementation.Close()
 	if err != nil {
-		return fmt.Errorf("%s @ %v", op, err)
+		return err
 	}
 	return nil
+}
+
+type Row struct {
+	Name        string `json:"name"`
+	Surname     string `json:"surname"`
+	Patronymic  string `json:"patronymic"`
+	Age         string `json:"age"`
+	Gender      string `json:"gender"`
+	Nationality string `json:"nationality"`
 }
 
 type handlers struct {
@@ -107,37 +122,21 @@ func (h handlers) DeleteByID(id string) error {
 
 	tx, err := h.DB.Begin()
 	if err != nil {
-		utils.LogDBDebug(h.log, source, op, err)
-
-		return fmt.Errorf("%s @ %w", op, err)
+		return err
 	}
 	defer tx.Rollback()
 
-	stmt, err := tx.Prepare("DELETE FROM ? WHERE id=?;")
+	result, err := tx.Exec(fmt.Sprintf("DELETE FROM %s WHERE id=%s;", h.config.Table, id))
 	if err != nil {
-		utils.LogDBDebug(h.log, source, op, err)
-
-		return fmt.Errorf("%s @ %w", op, err)
-	}
-	defer tx.Stmt(stmt).Close()
-
-	result, err := tx.Stmt(stmt).Exec(h.config.Database, id)
-	if err != nil {
-		utils.LogDBDebug(h.log, source, op, err)
-
-		return fmt.Errorf("%s @ %w", op, err)
+		return err
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		utils.LogDBDebug(h.log, source, op, err)
-
-		return fmt.Errorf("%s @ %w", op, err)
+		return err
 	}
 
 	if rowsAffected == 0 {
-		utils.LogDBDebug(h.log, source, op, err)
-
 		return sql.ErrNoRows
 	}
 
@@ -145,22 +144,157 @@ func (h handlers) DeleteByID(id string) error {
 		"транзакция завершена",
 		slog.String("source", source),
 		slog.String("op", op),
-		slog.Any("result", result),
 	)
 
 	return tx.Commit()
 }
 
-func (h handlers) UpdateByID(id string) error {
-	// CALL TO DB
+func buildUpdateByIDQuery(id string, original []byte, update []byte, config config.PostgreSQLConfig) (string, error) {
+	const op = "utils.buildUpdateByIDQuery()"
+	var o Row
+	var u Row
 
-	return nil
+	json.Unmarshal(original, &o)
+	json.Unmarshal(update, &u)
+
+	count := 0
+	t := []string{}
+
+	if o.Name != u.Name && u.Name != "" {
+		t = append(t, "name="+"'"+u.Name+"'")
+		count++
+	}
+
+	if o.Surname != u.Surname && u.Surname != "" {
+		t = append(t, "surname="+"'"+u.Surname+"'")
+		count++
+	}
+
+	if o.Patronymic != u.Patronymic && u.Patronymic != "" {
+		t = append(t, "patronymic="+"'"+u.Patronymic+"'")
+		count++
+	}
+
+	if o.Age != u.Age && u.Age != "" {
+		t = append(t, "age="+"'"+u.Age+"'")
+		count++
+	}
+
+	if o.Gender != u.Gender && u.Gender != "" {
+		t = append(t, "gender="+"'"+u.Gender+"'")
+		count++
+	}
+
+	if o.Nationality != u.Nationality && u.Nationality != "" {
+		t = append(t, "nationality="+"'"+u.Nationality+"'")
+		count++
+	}
+
+	if count == 0 {
+		return "", ErrNoNewValues
+	}
+
+	values := strings.Join(t, ", ")
+
+	return fmt.Sprintf("UPDATE %s SET %s WHERE id=%s;", config.Table, values, id), nil
 }
 
-func (h handlers) Create(name string, surname string, patronymic string) error {
-	// CALL TO DB
+func (h handlers) UpdateByID(id string, data []byte) error {
+	const op = "postgresql.UpdateByID()"
 
-	return nil
+	h.log.Debug(
+		"старт транзакции",
+		slog.String("source", source),
+		slog.String("op", op),
+	)
+
+	tx, err := h.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	r := tx.QueryRow(fmt.Sprintf("SELECT name, surname, patronymic, age, gender, nationality FROM %s WHERE id=%s;", h.config.Table, id))
+	if r.Err() != nil {
+		return r.Err()
+	}
+
+	var original Row
+
+	err = r.Scan(&original.Name, &original.Surname, &original.Patronymic, &original.Age, &original.Gender, &original.Nationality)
+	if err != nil {
+		return err
+	}
+
+	originalByte, err := json.Marshal(original)
+	if err != nil {
+		return err
+	}
+
+	query, err := buildUpdateByIDQuery(id, originalByte, data, h.config)
+	if err != nil {
+		return ErrNoNewValues
+	}
+
+	result, err := tx.Exec(query)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return ErrOperationDidNotSuccessed
+	}
+
+	h.log.Debug(
+		"транзакция завершена",
+		slog.String("source", source),
+		slog.String("op", op),
+	)
+
+	return tx.Commit()
+}
+
+func (h handlers) Create(name string, surname string, patronymic string, age int, gender string, nationality string) error {
+	const op = "postgresql.Create()"
+
+	h.log.Debug(
+		"старт транзакции",
+		slog.String("source", source),
+		slog.String("op", op),
+	)
+
+	tx, err := h.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	result, err := tx.Exec(fmt.Sprintf("INSERT INTO %s (name, surname, patronymic, age, gender, nationality) VALUES('%s', '%s', '%s', %v, '%s', '%s');", h.config.Table, name, surname, patronymic, age, gender, nationality))
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return ErrOperationDidNotSuccessed
+	}
+
+	h.log.Debug(
+		"транзакция завершена",
+		slog.String("source", source),
+		slog.String("op", op),
+	)
+
+	return tx.Commit()
 }
 
 // МОКИ
@@ -171,10 +305,10 @@ func (u UnimplementedHandlers) DeleteByID(id string) error {
 	return nil
 }
 
-func (u UnimplementedHandlers) UpdateByID(id string) error {
+func (u UnimplementedHandlers) UpdateByID(id string, data []byte) error {
 	return nil
 }
 
-func (u UnimplementedHandlers) Create(name string, surname string, patronymic string) error {
+func (u UnimplementedHandlers) Create(name string, surname string, patronymic string, age int, gender string, nationality string) error {
 	return nil
 }

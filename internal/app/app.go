@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -28,12 +27,12 @@ func New() (*App, error) {
 
 	config, err := config.New()
 	if err != nil {
-		return nil, fmt.Errorf("%s.%v", op, err)
+		return nil, err
 	}
 
 	log, err := logger.New(config.LogMode)
 	if err != nil {
-		return nil, fmt.Errorf("%s.%v", op, err)
+		return nil, err
 	}
 
 	log.Log.Debug(
@@ -45,7 +44,14 @@ func New() (*App, error) {
 
 	storage, err := storage.New(config.Storage.PostgreSQL, log.Log)
 	if err != nil {
-		return nil, fmt.Errorf("%s.%v", op, err)
+		log.Log.Error(
+			"хранилище не может быть инициализировано",
+			slog.String("source", source),
+			slog.String("op", op),
+			slog.Any("error", err),
+		)
+
+		return nil, err
 	}
 
 	log.Log.Debug(
@@ -74,7 +80,7 @@ func (a *App) Run() {
 
 	errChan := make(chan error, 1)
 
-	a.log.Log.Info(
+	a.log.Log.Debug(
 		"запуск сервера",
 		slog.String("source", source),
 		slog.String("op", op),
@@ -117,15 +123,16 @@ func (a *App) Run() {
 		slog.String("op", op),
 	)
 
-	err := a.shutdown()
-	if err != nil {
+	errs := a.shutdown()
+	for _, e := range errs {
 		a.log.Log.Error(
-			"не удалось выполнить gracefull shutdown, выполняется принудительная остановка",
+			"не удалось выполнить gracefull shutdown для одного или нескольких компонентов",
 			slog.String("source", source),
 			slog.String("op", op),
-			slog.Any("error", err),
+			slog.Any("error", e),
 		)
 	}
+
 	a.log.Log.Info(
 		"выполнен gracefull shutdown",
 		slog.String("source", source),
@@ -133,18 +140,26 @@ func (a *App) Run() {
 	)
 }
 
-func (a *App) shutdown() error {
+func (a *App) shutdown() []error {
 	const op = "app.shutdown()"
 
+	var errs []error
+
 	a.log.Log.Debug(
-		"gracefull shutdown для храналища",
+		"gracefull shutdown для хранилища",
 		slog.String("source", source),
 		slog.String("op", op),
 	)
 
 	err := a.Storage.Shutdown()
 	if err != nil {
-		return fmt.Errorf("%s.%v", op, err)
+		a.log.Log.Error(
+			"хранилищу не удалось выполнить graceful shutdown, принудительная отсановка",
+			slog.String("source", source),
+			slog.String("op", op),
+		)
+
+		errs = append(errs, err)
 	}
 
 	a.log.Log.Debug(
@@ -155,7 +170,13 @@ func (a *App) shutdown() error {
 
 	err = a.log.Shutdown()
 	if err != nil {
-		return fmt.Errorf("%s.%v", op, err)
+		a.log.Log.Error(
+			"логам не удалось выполнить shutdown, принудительная отсановка",
+			slog.String("source", source),
+			slog.String("op", op),
+		)
+
+		errs = append(errs, err)
 	}
 
 	a.log.Log.Debug(
@@ -166,8 +187,14 @@ func (a *App) shutdown() error {
 
 	err = a.EffectiveMobile.Shutdown()
 	if err != nil {
-		return fmt.Errorf("%s.%v", op, err)
+		a.log.Log.Error(
+			"effectivemobile не удалось выполнить graceful shutdown, принудительная отсановка",
+			slog.String("source", source),
+			slog.String("op", op),
+		)
+
+		errs = append(errs, err)
 	}
 
-	return nil
+	return errs
 }

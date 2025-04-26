@@ -26,6 +26,12 @@ type EffectiveMobileConfig struct {
 	ReadTimeout  time.Duration `env:"SERVER_READTIMEOUT" env-required:"true" env-description:"Таймаут сервера на Read"`
 	WriteTimeout time.Duration `env:"SERVER_WRITETIMEOUT" env-required:"true" env-description:"Таймаут сервера на Write"`
 	IdleTimeout  time.Duration `env:"SERVER_IDLETIMEOUT" env-required:"true" env-description:"Таймаут сервера на Idle"`
+
+	Client ClientConfig
+}
+
+type ClientConfig struct {
+	Timeout time.Duration `env:"CLIENT_TIMEOUT" env-required:"true" env-description:"Таймаут клиента"`
 }
 
 type StorageConfig struct {
@@ -38,6 +44,7 @@ type PostgreSQLConfig struct {
 	Host     string `env:"POSTGRESQL_HOST" env-required:"true" env-description:"Имя хоста PostgreSQL"`
 	Port     string `env:"POSTGRESQL_PORT" env-required:"true" env-description:"Порт PostgreSQL"`
 	Database string `env:"POSTGRESQL_DBNAME" env-required:"true" env-description:"БД PostgreSQL"`
+	Table    string `env:"POSTGRESQL_TABLE" env-required:"true" env-description:"Таблица PostgreSQL"`
 	SSL      string `env:"POSTGRESQL_SSLMODE" env-required:"true" env-description:"Режим SSL PostgreSQL"`
 	Extra    string `env:"POSTGRESQL_EXTRA" env-description:"Дополнительные опции PostgreSQL"`
 }
@@ -49,7 +56,7 @@ func New() (Config, error) {
 
 	err := godotenv.Load()
 	if err != nil {
-		return Config{}, fmt.Errorf("%s @ %v", op, err)
+		return Config{}, err
 	}
 
 	err = cleanenv.ReadEnv(&config)
@@ -61,7 +68,7 @@ func New() (Config, error) {
 
 		fmt.Println("")
 
-		return Config{}, fmt.Errorf("%s @ %v", op, err)
+		return Config{}, err
 	}
 
 	return config, nil
