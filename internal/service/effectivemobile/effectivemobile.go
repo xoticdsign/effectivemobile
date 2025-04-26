@@ -43,7 +43,7 @@ type S struct {
 func New(config config.EffectiveMobileConfig, client *client.Client, storage *storage.Storage, log *slog.Logger) *Service {
 	return &Service{
 		S: S{
-			Handlers: handlers{
+			Handlers: Handlers{
 				Client:  client.C.Handlers,
 				Storage: storage.DB.Handlers,
 
@@ -70,7 +70,7 @@ type Querier interface {
 	Select(id string, limit []int, filter string, value string) ([]storage.Row, error)
 }
 
-type handlers struct {
+type Handlers struct {
 	UnimplementedHandlers
 
 	Client  Clienter
@@ -80,7 +80,7 @@ type handlers struct {
 	config config.EffectiveMobileConfig
 }
 
-func (h handlers) DeleteByID(id string) error {
+func (h Handlers) DeleteByID(id string) error {
 	const op = "service.DeleteByID()"
 
 	h.log.Debug(
@@ -122,7 +122,7 @@ func (h handlers) DeleteByID(id string) error {
 	return nil
 }
 
-func (h handlers) UpdateByID(id string, data []byte) error {
+func (h Handlers) UpdateByID(id string, data []byte) error {
 	const op = "service.UpdateByID()"
 
 	h.log.Debug(
@@ -184,7 +184,7 @@ func (h handlers) UpdateByID(id string, data []byte) error {
 	return nil
 }
 
-func (h handlers) Create(name string, surname string, patronymic string) error {
+func (h Handlers) Create(name string, surname string, patronymic string) error {
 	const op = "service.Create()"
 
 	h.log.Debug(
@@ -299,7 +299,7 @@ func (h handlers) Create(name string, surname string, patronymic string) error {
 	return nil
 }
 
-func (h handlers) Select(id string, limit []int, filter string, value string) ([]storage.Row, error) {
+func (h Handlers) Select(id string, limit []int, filter string, value string) ([]storage.Row, error) {
 	const op = "service.Select()"
 
 	h.log.Debug(

@@ -72,7 +72,7 @@ func New(config config.PostgreSQLConfig, log *slog.Logger) (*Storage, error) {
 	return &Storage{
 		DB: &DB{
 			Implementation: db,
-			Handlers: handlers{
+			Handlers: Handlers{
 				DB: db,
 
 				log:    log,
@@ -105,7 +105,7 @@ type Row struct {
 	Nationality string `json:"nationality"`
 }
 
-type handlers struct {
+type Handlers struct {
 	UnimplementedHandlers
 
 	DB *sql.DB
@@ -114,7 +114,7 @@ type handlers struct {
 	config config.PostgreSQLConfig
 }
 
-func (h handlers) DeleteByID(id string) error {
+func (h Handlers) DeleteByID(id string) error {
 	const op = "postgresql.DeleteByID()"
 
 	h.log.Debug(
@@ -204,7 +204,7 @@ func buildUpdateByIDQuery(id string, original []byte, update []byte, config conf
 	return fmt.Sprintf("UPDATE %s SET %s WHERE id=%s;", config.Table, values, id), nil
 }
 
-func (h handlers) UpdateByID(id string, data []byte) error {
+func (h Handlers) UpdateByID(id string, data []byte) error {
 	const op = "postgresql.UpdateByID()"
 
 	h.log.Debug(
@@ -264,7 +264,7 @@ func (h handlers) UpdateByID(id string, data []byte) error {
 	return tx.Commit()
 }
 
-func (h handlers) Create(name string, surname string, patronymic string, age int, gender string, nationality string) error {
+func (h Handlers) Create(name string, surname string, patronymic string, age int, gender string, nationality string) error {
 	const op = "postgresql.Create()"
 
 	h.log.Debug(
@@ -334,7 +334,7 @@ func buildSelectQuery(id string, limit []int, filter string, value string, confi
 	}
 }
 
-func (h handlers) Select(id string, limit []int, filter string, value string) ([]Row, error) {
+func (h Handlers) Select(id string, limit []int, filter string, value string) ([]Row, error) {
 	const op = "postgresql.Select()"
 
 	h.log.Debug(

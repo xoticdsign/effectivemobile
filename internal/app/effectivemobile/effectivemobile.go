@@ -55,7 +55,7 @@ func New(config config.EffectiveMobileConfig, storage *storage.Storage, log *slo
 
 	emservice := effectivemobileservice.New(config, client, storage, log)
 
-	h := handlers{
+	h := Handlers{
 		Service: emservice.S.Handlers,
 
 		log:    log,
@@ -109,7 +109,7 @@ type Servicer interface {
 	Select(id string, limit []int, filter string, value string) ([]storage.Row, error)
 }
 
-type handlers struct {
+type Handlers struct {
 	UnimplementedHandlers
 
 	Service Servicer
@@ -125,7 +125,7 @@ type DeleteByIDResponse struct {
 	Message string `json:"message"`
 }
 
-func (h handlers) DeleteByID(c *fiber.Ctx) error {
+func (h Handlers) DeleteByID(c *fiber.Ctx) error {
 	const op = "effectivemobile.DeleteByID()"
 
 	id := c.Params("id")
@@ -183,7 +183,7 @@ type UpdateByIDResponse struct {
 	Message string `json:"message"`
 }
 
-func (h handlers) UpdateByID(c *fiber.Ctx) error {
+func (h Handlers) UpdateByID(c *fiber.Ctx) error {
 	const op = "effectivemobile.UpdateByID()"
 
 	var body UpdateByIDRequest
@@ -257,7 +257,7 @@ type CreateResponse struct {
 	Message string `json:"message"`
 }
 
-func (h handlers) Create(c *fiber.Ctx) error {
+func (h Handlers) Create(c *fiber.Ctx) error {
 	const op = "effectivemobile.UpdateByID()"
 
 	var body CreateRequest
@@ -353,7 +353,7 @@ var (
 	FilterNationality = "nationality"
 )
 
-func (h handlers) Select(c *fiber.Ctx) error {
+func (h Handlers) Select(c *fiber.Ctx) error {
 	const op = "effectivemobile.Select()"
 
 	var body SelectRequest
