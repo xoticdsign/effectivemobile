@@ -403,7 +403,5 @@ func (u UnimplementedHandlers) Create(name string, surname string, patronymic st
 }
 
 func (u UnimplementedHandlers) Select(id string, limit []int, filter string, value string) ([]Row, error) {
-	return []Row{
-		{ID: 0, Name: "", Surname: "", Patronymic: "", Age: 0, Gender: "", Nationality: ""},
-	}, nil
+	return []Row{}, nil
 }
