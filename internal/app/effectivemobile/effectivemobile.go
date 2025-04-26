@@ -27,6 +27,7 @@ type Handlerer interface {
 	DeleteByID(c *fiber.Ctx) error
 	UpdateByID(c *fiber.Ctx) error
 	Create(c *fiber.Ctx) error
+	Select(c *fiber.Ctx) error
 }
 
 type Server struct {
@@ -64,6 +65,7 @@ func New(config config.EffectiveMobileConfig, storage *storage.Storage, log *slo
 	f.Delete("/delete/:id", h.DeleteByID)
 	f.Put("/update/:id", h.UpdateByID)
 	f.Post("/create", h.Create)
+	f.Get("/select/:id?", h.Select)
 
 	return &App{
 		Server: Server{
@@ -104,6 +106,7 @@ type Servicer interface {
 	DeleteByID(id string) error
 	UpdateByID(id string, data []byte) error
 	Create(name string, surname string, patronymic string) error
+	Select(id string, limit []int, filter string, value string) ([]storage.Row, error)
 }
 
 type handlers struct {
@@ -170,7 +173,7 @@ type UpdateByIDRequest struct {
 	Name        string `json:"name"`
 	Surname     string `json:"surname"`
 	Patronymic  string `json:"patronymic"`
-	Age         string `json:"age"`
+	Age         int    `json:"age"`
 	Gender      string `json:"gender"`
 	Nationality string `json:"nationality"`
 }
@@ -325,6 +328,147 @@ func (h handlers) Create(c *fiber.Ctx) error {
 	})
 }
 
+type SelectRequest struct {
+	Limit  []int  `json:"limit"`
+	Filter Filter `json:"filter"`
+}
+
+type SelectResponse struct {
+	Status  int           `json:"status"`
+	Message string        `json:"message"`
+	Result  []storage.Row `json:"result"`
+}
+
+type Filter struct {
+	Type  string `json:"type"`
+	Value string `json:"value"`
+}
+
+var (
+	FilterName        = "name"
+	FilterSurname     = "surname"
+	FilterPatronymic  = "patronymic"
+	FilterAge         = "age"
+	FilterGender      = "gender"
+	FilterNationality = "nationality"
+)
+
+func (h handlers) Select(c *fiber.Ctx) error {
+	const op = "effectivemobile.Select()"
+
+	var body SelectRequest
+
+	if c.Body() != nil {
+		err := c.BodyParser(&body)
+		if err != nil {
+			h.log.Debug(
+				"неправильно сформирован запрос",
+				slog.String("source", source),
+				slog.String("op", op),
+				slog.Any("error", err),
+			)
+
+			return fiber.ErrBadRequest
+		}
+	}
+
+	id := c.Params("id")
+	if id != "" {
+		body = SelectRequest{}
+	}
+
+	h.log.Debug(
+		"получен запрос на получение",
+		slog.String("source", source),
+		slog.String("op", op),
+		slog.Any("parameters", []string{id}),
+		slog.Any("body", body),
+	)
+
+	if id == "" && c.Body() == nil {
+		h.log.Debug(
+			"неправильно сформирован запрос",
+			slog.String("source", source),
+			slog.String("op", op),
+			slog.Any("error", "empty body and id parameter"),
+		)
+
+		return fiber.ErrBadRequest
+	}
+
+	if body.Limit == nil {
+		body.Limit = []int{0, h.config.SelectLimit}
+	}
+
+	filters := []string{FilterName, FilterSurname, FilterPatronymic, FilterAge, FilterGender, FilterNationality}
+
+	if body.Filter.Type == "" {
+		if body.Filter.Value != "" {
+			h.log.Debug(
+				"неправильно сформирован запрос",
+				slog.String("source", source),
+				slog.String("op", op),
+				slog.Any("error", "malfored body"),
+			)
+
+			return fiber.ErrBadRequest
+		}
+	} else {
+		if body.Filter.Value == "" {
+			h.log.Debug(
+				"неправильно сформирован запрос",
+				slog.String("source", source),
+				slog.String("op", op),
+				slog.Any("error", "malfored body"),
+			)
+
+			return fiber.ErrBadRequest
+		}
+
+		exists := false
+
+		for _, filter := range filters {
+			if body.Filter.Type == filter {
+				exists = true
+			}
+		}
+
+		if !exists {
+			h.log.Debug(
+				"неправильно сформирован запрос",
+				slog.String("source", source),
+				slog.String("op", op),
+				slog.Any("error", "malfored body"),
+			)
+
+			return fiber.ErrBadRequest
+		}
+	}
+
+	r, err := h.Service.Select(id, body.Limit, body.Filter.Type, body.Filter.Value)
+	if err != nil {
+		switch {
+		case errors.Is(err, effectivemobileservice.ErrStorageNotFound):
+			return fiber.ErrNotFound
+
+		default:
+			return fiber.ErrInternalServerError
+		}
+	}
+
+	h.log.Debug(
+		"обработан запрос на получение",
+		slog.String("source", source),
+		slog.String("op", op),
+	)
+
+	return c.JSON(SelectResponse{
+		Status:  fiber.StatusOK,
+		Message: "data found",
+		Result:  r,
+	})
+}
+
 // МОКИ
 
 type UnimplementedHandlers struct{}
@@ -333,10 +477,14 @@ func (u UnimplementedHandlers) DeleteByID(c *fiber.Ctx) error {
 	return nil
 }
 
-func (h UnimplementedHandlers) UpdateByID(c *fiber.Ctx) error {
+func (u UnimplementedHandlers) UpdateByID(c *fiber.Ctx) error {
 	return nil
 }
 
-func (h UnimplementedHandlers) Create(c *fiber.Ctx) error {
+func (u UnimplementedHandlers) Create(c *fiber.Ctx) error {
+	return nil
+}
+
+func (u UnimplementedHandlers) Select(c *fiber.Ctx) error {
 	return nil
 }

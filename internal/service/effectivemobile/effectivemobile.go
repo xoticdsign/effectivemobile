@@ -33,6 +33,7 @@ type Handlerer interface {
 	DeleteByID(id string) error
 	UpdateByID(id string, data []byte) error
 	Create(name string, surname string, patronymic string) error
+	Select(id string, limit []int, filter string, value string) ([]storage.Row, error)
 }
 
 type S struct {
@@ -66,6 +67,7 @@ type Querier interface {
 	DeleteByID(id string) error
 	UpdateByID(id string, data []byte) error
 	Create(name string, surname string, patronymic string, age int, gender string, nationality string) error
+	Select(id string, limit []int, filter string, value string) ([]storage.Row, error)
 }
 
 type handlers struct {
@@ -132,6 +134,16 @@ func (h handlers) UpdateByID(id string, data []byte) error {
 	err := h.Storage.UpdateByID(id, data)
 	if err != nil {
 		switch {
+		case errors.Is(err, storage.ErrConstraint):
+			h.log.Error(
+				"предоставленные данные не соответсвуют ограничениям таблицы",
+				slog.String("source", source),
+				slog.String("op", op),
+				slog.Any("error", err),
+			)
+
+			return fmt.Errorf("%w: %v", ErrStorageBadRequest, err)
+
 		case errors.Is(err, sql.ErrNoRows):
 			h.log.Error(
 				"в хранилище нет соответсвующих данных",
@@ -287,6 +299,48 @@ func (h handlers) Create(name string, surname string, patronymic string) error {
 	return nil
 }
 
+func (h handlers) Select(id string, limit []int, filter string, value string) ([]storage.Row, error) {
+	const op = "service.Select()"
+
+	h.log.Debug(
+		"данные получены сервисным слоем",
+		slog.String("source", source),
+		slog.String("op", op),
+	)
+
+	r, err := h.Storage.Select(id, limit, filter, value)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			h.log.Error(
+				"в хранилище нет соответсвующих данных",
+				slog.String("source", source),
+				slog.String("op", op),
+				slog.Any("error", err),
+			)
+
+			return nil, fmt.Errorf("%w: %v", ErrStorageNotFound, err)
+
+		default:
+			h.log.Error(
+				"внутренняя ошибка хранилища",
+				slog.String("source", source),
+				slog.String("op", op),
+				slog.Any("error", err),
+			)
+
+			return nil, fmt.Errorf("%w: %v", ErrStorageInternal, err)
+		}
+	}
+	h.log.Debug(
+		"данные обработаны сервисным слоем",
+		slog.String("source", source),
+		slog.String("op", op),
+	)
+
+	return r, nil
+}
+
 // МОКИ
 
 type UnimplementedHandlers struct{}
@@ -301,4 +355,8 @@ func (u UnimplementedHandlers) UpdateByID(id string, data []byte) error {
 
 func (u UnimplementedHandlers) Create(name string, surname string, patronymic string) error {
 	return nil
+}
+
+func (u UnimplementedHandlers) Select(id string, limit []int, filter string, value string) ([]storage.Row, error) {
+	return nil, nil
 }

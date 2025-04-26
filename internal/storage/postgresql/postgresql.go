@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"unicode"
 
 	_ "github.com/lib/pq"
 
@@ -14,6 +15,7 @@ import (
 
 var (
 	ErrNoNewValues              = fmt.Errorf("в запросе не были предотавлены новые данные")
+	ErrConstraint               = fmt.Errorf("был нарушен check")
 	ErrOperationDidNotSuccessed = fmt.Errorf("операция не была выполнена")
 )
 
@@ -30,6 +32,7 @@ type Handlerer interface {
 	DeleteByID(id string) error
 	UpdateByID(id string, data []byte) error
 	Create(name string, surname string, patronymic string, age int, gender string, nationality string) error
+	Select(id string, limit []int, filter string, value string) ([]Row, error)
 }
 
 type DB struct {
@@ -93,10 +96,11 @@ func (s *Storage) Shutdown() error {
 }
 
 type Row struct {
+	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	Surname     string `json:"surname"`
 	Patronymic  string `json:"patronymic"`
-	Age         string `json:"age"`
+	Age         int    `json:"age"`
 	Gender      string `json:"gender"`
 	Nationality string `json:"nationality"`
 }
@@ -151,6 +155,7 @@ func (h handlers) DeleteByID(id string) error {
 
 func buildUpdateByIDQuery(id string, original []byte, update []byte, config config.PostgreSQLConfig) (string, error) {
 	const op = "utils.buildUpdateByIDQuery()"
+
 	var o Row
 	var u Row
 
@@ -161,32 +166,32 @@ func buildUpdateByIDQuery(id string, original []byte, update []byte, config conf
 	t := []string{}
 
 	if o.Name != u.Name && u.Name != "" {
-		t = append(t, "name="+"'"+u.Name+"'")
+		t = append(t, fmt.Sprintf("name='%s'", u.Name))
 		count++
 	}
 
 	if o.Surname != u.Surname && u.Surname != "" {
-		t = append(t, "surname="+"'"+u.Surname+"'")
+		t = append(t, fmt.Sprintf("surname='%s'", u.Surname))
 		count++
 	}
 
 	if o.Patronymic != u.Patronymic && u.Patronymic != "" {
-		t = append(t, "patronymic="+"'"+u.Patronymic+"'")
+		t = append(t, fmt.Sprintf("patronymic='%s'", u.Patronymic))
 		count++
 	}
 
-	if o.Age != u.Age && u.Age != "" {
-		t = append(t, "age="+"'"+u.Age+"'")
+	if o.Age != u.Age && u.Age != 0 {
+		t = append(t, fmt.Sprintf("age=%v", u.Age))
 		count++
 	}
 
 	if o.Gender != u.Gender && u.Gender != "" {
-		t = append(t, "gender="+"'"+u.Gender+"'")
+		t = append(t, fmt.Sprintf("gender='%s'", u.Gender))
 		count++
 	}
 
 	if o.Nationality != u.Nationality && u.Nationality != "" {
-		t = append(t, "nationality="+"'"+u.Nationality+"'")
+		t = append(t, fmt.Sprintf("nationality='%s'", u.Nationality))
 		count++
 	}
 
@@ -238,7 +243,7 @@ func (h handlers) UpdateByID(id string, data []byte) error {
 
 	result, err := tx.Exec(query)
 	if err != nil {
-		return err
+		return ErrConstraint
 	}
 
 	rowsAffected, err := result.RowsAffected()
@@ -297,6 +302,90 @@ func (h handlers) Create(name string, surname string, patronymic string, age int
 	return tx.Commit()
 }
 
+func buildSelectQuery(id string, limit []int, filter string, value string, config config.PostgreSQLConfig) string {
+	if id != "" {
+		return fmt.Sprintf("SELECT * FROM %s WHERE id=%s;", config.Table, id)
+	} else {
+		if filter == "" {
+			return fmt.Sprintf("SELECT * FROM %s LIMIT %v OFFSET %v;", config.Table, limit[1], limit[0])
+		} else {
+			switch {
+			case filter == "name" || filter == "surname" || filter == "patronymic":
+				runes := []rune(value)
+				runes[0] = unicode.ToUpper(runes[0])
+
+				for i := 1; i < len(runes); i++ {
+					runes[i] = unicode.ToLower(runes[i])
+				}
+
+				value = string(runes)
+
+			case filter == "gender":
+				value = strings.ToLower(value)
+
+			case filter == "nationality":
+				value = strings.ToUpper(value)
+			}
+
+			where := fmt.Sprintf("%s='%s'", filter, value)
+
+			return fmt.Sprintf("SELECT * FROM %s WHERE %s LIMIT %v OFFSET %v;", config.Table, where, limit[1], limit[0])
+		}
+	}
+}
+
+func (h handlers) Select(id string, limit []int, filter string, value string) ([]Row, error) {
+	const op = "postgresql.Select()"
+
+	h.log.Debug(
+		"старт транзакции",
+		slog.String("source", source),
+		slog.String("op", op),
+	)
+
+	tx, err := h.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	query := buildSelectQuery(id, limit, filter, value, h.config)
+
+	r, err := tx.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+
+	var rows []Row
+
+	for r.Next() {
+		var row Row
+
+		err := r.Scan(&row.ID, &row.Name, &row.Surname, &row.Patronymic, &row.Age, &row.Gender, &row.Nationality)
+		if err != nil {
+			return nil, err
+		}
+		rows = append(rows, row)
+	}
+
+	if r.Err() != nil {
+		return nil, r.Err()
+	}
+
+	if len(rows) == 0 {
+		return nil, sql.ErrNoRows
+	}
+
+	h.log.Debug(
+		"транзакция завершена",
+		slog.String("source", source),
+		slog.String("op", op),
+	)
+
+	return rows, nil
+}
+
 // МОКИ
 
 type UnimplementedHandlers struct{}
@@ -311,4 +400,8 @@ func (u UnimplementedHandlers) UpdateByID(id string, data []byte) error {
 
 func (u UnimplementedHandlers) Create(name string, surname string, patronymic string, age int, gender string, nationality string) error {
 	return nil
+}
+
+func (u UnimplementedHandlers) Select(id string, limit []int, filter string, value string) ([]Row, error) {
+	return nil, nil
 }

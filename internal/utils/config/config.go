@@ -27,6 +27,8 @@ type EffectiveMobileConfig struct {
 	WriteTimeout time.Duration `env:"SERVER_WRITETIMEOUT" env-required:"true" env-description:"Таймаут сервера на Write"`
 	IdleTimeout  time.Duration `env:"SERVER_IDLETIMEOUT" env-required:"true" env-description:"Таймаут сервера на Idle"`
 
+	SelectLimit int `env:"SERVER_SELECTLIMIT" env-required:"true" env-description:"Стандартный лимит для пагинации"`
+
 	Client ClientConfig
 }
 
