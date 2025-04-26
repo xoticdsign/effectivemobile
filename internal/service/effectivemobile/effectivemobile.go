@@ -346,17 +346,51 @@ func (h Handlers) Select(id string, limit []int, filter string, value string) ([
 type UnimplementedHandlers struct{}
 
 func (u UnimplementedHandlers) DeleteByID(id string) error {
+	switch id {
+	case "s404":
+		return ErrStorageNotFound
+
+	case "s500":
+		return ErrStorageInternal
+	}
 	return nil
 }
 
 func (u UnimplementedHandlers) UpdateByID(id string, data []byte) error {
+	switch id {
+	case "s404":
+		return ErrStorageNotFound
+
+	case "s400":
+		return ErrStorageBadRequest
+
+	case "s500":
+		return ErrStorageInternal
+	}
 	return nil
 }
 
 func (u UnimplementedHandlers) Create(name string, surname string, patronymic string) error {
+	switch name {
+	case "s404":
+		return ErrStorageNotFound
+
+	case "c404":
+		return ErrClientNotFound
+
+	case "500":
+		return ErrStorageInternal
+	}
 	return nil
 }
 
 func (u UnimplementedHandlers) Select(id string, limit []int, filter string, value string) ([]storage.Row, error) {
-	return nil, nil
+	switch id {
+	case "s404":
+		return []storage.Row{}, ErrStorageNotFound
+
+	case "s500":
+		return []storage.Row{}, ErrStorageInternal
+	}
+	return []storage.Row{}, nil
 }

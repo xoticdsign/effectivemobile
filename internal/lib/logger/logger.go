@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -78,3 +79,12 @@ func (l *Logger) Shutdown() error {
 	}
 	return nil
 }
+
+// МОКИ
+
+type SilentHandler struct{}
+
+func (s SilentHandler) Enabled(_ context.Context, _ slog.Level) bool  { return false }
+func (s SilentHandler) Handle(_ context.Context, _ slog.Record) error { return nil }
+func (s SilentHandler) WithAttrs(_ []slog.Attr) slog.Handler          { return s }
+func (s SilentHandler) WithGroup(_ string) slog.Handler               { return s }

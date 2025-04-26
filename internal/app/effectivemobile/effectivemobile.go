@@ -2,6 +2,7 @@ package effectivemobile
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 
@@ -15,12 +16,28 @@ import (
 
 const source = "effectivemobile"
 
+var (
+	DeleteByIDHanlder    = "delete"
+	DeleteByIDParameters = ":id?"
+	UpdateByIDHandler    = "update"
+	UpdateByIDParameters = ":id?"
+	CreateHandler        = "create"
+	SelectHandler        = "select"
+	SelectParameters     = ":id?"
+)
+
+var (
+	DeleteByIDSuccess = "entity has been deleted"
+	UpdateByIDSuccess = "entity has been updated"
+	CreateSuccess     = "entity has been created"
+	SelectSuccess     = "entity(ies) found"
+)
+
 type App struct {
 	Server Server
 	Client *client.Client
-
-	log    *slog.Logger
-	config config.EffectiveMobileConfig
+	Log    *slog.Logger
+	Config config.EffectiveMobileConfig
 }
 
 type Handlerer interface {
@@ -57,15 +74,14 @@ func New(config config.EffectiveMobileConfig, storage *storage.Storage, log *slo
 
 	h := Handlers{
 		Service: emservice.S.Handlers,
-
-		log:    log,
-		config: config,
+		Log:     log,
+		Config:  config,
 	}
 
-	f.Delete("/delete/:id", h.DeleteByID)
-	f.Put("/update/:id", h.UpdateByID)
-	f.Post("/create", h.Create)
-	f.Get("/select/:id?", h.Select)
+	f.Delete(fmt.Sprintf("/%s/%s", DeleteByIDHanlder, DeleteByIDParameters), h.DeleteByID)
+	f.Put(fmt.Sprintf("/%s/%s", UpdateByIDHandler, UpdateByIDParameters), h.UpdateByID)
+	f.Post(fmt.Sprintf("/%s", CreateHandler), h.Create)
+	f.Get(fmt.Sprintf("/%s/%s", SelectHandler, SelectParameters), h.Select)
 
 	return &App{
 		Server: Server{
@@ -73,16 +89,15 @@ func New(config config.EffectiveMobileConfig, storage *storage.Storage, log *slo
 			Handlers:       h,
 		},
 		Client: client,
-
-		log:    log,
-		config: config,
+		Log:    log,
+		Config: config,
 	}
 }
 
 func (a *App) Run() error {
 	const op = "effectivemobile.Run()"
 
-	err := a.Server.Implementation.Listen(net.JoinHostPort(a.config.Host, a.config.Port))
+	err := a.Server.Implementation.Listen(net.JoinHostPort(a.Config.Host, a.Config.Port))
 	if err != nil {
 		return err
 	}
@@ -113,9 +128,8 @@ type Handlers struct {
 	UnimplementedHandlers
 
 	Service Servicer
-
-	log    *slog.Logger
-	config config.EffectiveMobileConfig
+	Log     *slog.Logger
+	Config  config.EffectiveMobileConfig
 }
 
 type DeleteByIDRequest struct{}
@@ -130,7 +144,7 @@ func (h Handlers) DeleteByID(c *fiber.Ctx) error {
 
 	id := c.Params("id")
 	if id == "" {
-		h.log.Debug(
+		h.Log.Debug(
 			"отсутсвуют параметры",
 			slog.String("source", source),
 			slog.String("op", op),
@@ -140,7 +154,7 @@ func (h Handlers) DeleteByID(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	h.log.Debug(
+	h.Log.Debug(
 		"получен запрос на удаление",
 		slog.String("source", source),
 		slog.String("op", op),
@@ -157,7 +171,7 @@ func (h Handlers) DeleteByID(c *fiber.Ctx) error {
 			return fiber.ErrInternalServerError
 		}
 	}
-	h.log.Debug(
+	h.Log.Debug(
 		"обработан запрос на удаление",
 		slog.String("source", source),
 		slog.String("op", op),
@@ -165,7 +179,7 @@ func (h Handlers) DeleteByID(c *fiber.Ctx) error {
 
 	return c.JSON(&DeleteByIDResponse{
 		Status:  fiber.StatusOK,
-		Message: "entity has been deleted",
+		Message: DeleteByIDSuccess,
 	})
 }
 
@@ -190,7 +204,7 @@ func (h Handlers) UpdateByID(c *fiber.Ctx) error {
 
 	err := c.BodyParser(&body)
 	if err != nil {
-		h.log.Debug(
+		h.Log.Debug(
 			"неправильно сформирован запрос",
 			slog.String("source", source),
 			slog.String("op", op),
@@ -202,7 +216,7 @@ func (h Handlers) UpdateByID(c *fiber.Ctx) error {
 
 	id := c.Params("id")
 	if id == "" {
-		h.log.Debug(
+		h.Log.Debug(
 			"отсутсвуют параметры",
 			slog.String("source", source),
 			slog.String("op", op),
@@ -212,7 +226,7 @@ func (h Handlers) UpdateByID(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	h.log.Debug(
+	h.Log.Debug(
 		"получен запрос на обновление",
 		slog.String("source", source),
 		slog.String("op", op),
@@ -234,15 +248,15 @@ func (h Handlers) UpdateByID(c *fiber.Ctx) error {
 		}
 
 	}
-	h.log.Debug(
+	h.Log.Debug(
 		"обработан запрос на обновление",
 		slog.String("source", source),
 		slog.String("op", op),
 	)
 
-	return c.JSON(UpdateByIDResponse{
+	return c.JSON(&UpdateByIDResponse{
 		Status:  fiber.StatusOK,
-		Message: "entity has been updated",
+		Message: UpdateByIDSuccess,
 	})
 }
 
@@ -264,7 +278,7 @@ func (h Handlers) Create(c *fiber.Ctx) error {
 
 	err := c.BodyParser(&body)
 	if err != nil {
-		h.log.Debug(
+		h.Log.Debug(
 			"неправильно сформирован запрос",
 			slog.String("source", source),
 			slog.String("op", op),
@@ -275,7 +289,7 @@ func (h Handlers) Create(c *fiber.Ctx) error {
 	}
 
 	if body.Name == "" {
-		h.log.Debug(
+		h.Log.Debug(
 			"неправильно сформирован запрос",
 			slog.String("source", source),
 			slog.String("op", op),
@@ -286,7 +300,7 @@ func (h Handlers) Create(c *fiber.Ctx) error {
 	}
 
 	if body.Surname == "" {
-		h.log.Debug(
+		h.Log.Debug(
 			"неправильно сформирован запрос",
 			slog.String("source", source),
 			slog.String("op", op),
@@ -296,8 +310,8 @@ func (h Handlers) Create(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	h.log.Debug(
-		"получен запрос на обновление",
+	h.Log.Debug(
+		"получен запрос на создание",
 		slog.String("source", source),
 		slog.String("op", op),
 		slog.Any("body", body),
@@ -316,15 +330,15 @@ func (h Handlers) Create(c *fiber.Ctx) error {
 			return fiber.ErrInternalServerError
 		}
 	}
-	h.log.Debug(
+	h.Log.Debug(
 		"обработан запрос на создание",
 		slog.String("source", source),
 		slog.String("op", op),
 	)
 
-	return c.JSON(UpdateByIDResponse{
+	return c.JSON(&CreateResponse{
 		Status:  fiber.StatusOK,
-		Message: "entity has been created",
+		Message: CreateSuccess,
 	})
 }
 
@@ -361,7 +375,7 @@ func (h Handlers) Select(c *fiber.Ctx) error {
 	if c.Body() != nil {
 		err := c.BodyParser(&body)
 		if err != nil {
-			h.log.Debug(
+			h.Log.Debug(
 				"неправильно сформирован запрос",
 				slog.String("source", source),
 				slog.String("op", op),
@@ -377,7 +391,7 @@ func (h Handlers) Select(c *fiber.Ctx) error {
 		body = SelectRequest{}
 	}
 
-	h.log.Debug(
+	h.Log.Debug(
 		"получен запрос на получение",
 		slog.String("source", source),
 		slog.String("op", op),
@@ -385,8 +399,8 @@ func (h Handlers) Select(c *fiber.Ctx) error {
 		slog.Any("body", body),
 	)
 
-	if id == "" && c.Body() == nil {
-		h.log.Debug(
+	if id == "" && len(c.Body()) == 0 {
+		h.Log.Debug(
 			"неправильно сформирован запрос",
 			slog.String("source", source),
 			slog.String("op", op),
@@ -397,14 +411,14 @@ func (h Handlers) Select(c *fiber.Ctx) error {
 	}
 
 	if body.Limit == nil {
-		body.Limit = []int{0, h.config.SelectLimit}
+		body.Limit = []int{0, h.Config.SelectLimit}
 	}
 
 	filters := []string{FilterName, FilterSurname, FilterPatronymic, FilterAge, FilterGender, FilterNationality}
 
 	if body.Filter.Type == "" {
 		if body.Filter.Value != "" {
-			h.log.Debug(
+			h.Log.Debug(
 				"неправильно сформирован запрос",
 				slog.String("source", source),
 				slog.String("op", op),
@@ -415,7 +429,7 @@ func (h Handlers) Select(c *fiber.Ctx) error {
 		}
 	} else {
 		if body.Filter.Value == "" {
-			h.log.Debug(
+			h.Log.Debug(
 				"неправильно сформирован запрос",
 				slog.String("source", source),
 				slog.String("op", op),
@@ -434,7 +448,7 @@ func (h Handlers) Select(c *fiber.Ctx) error {
 		}
 
 		if !exists {
-			h.log.Debug(
+			h.Log.Debug(
 				"неправильно сформирован запрос",
 				slog.String("source", source),
 				slog.String("op", op),
@@ -456,15 +470,15 @@ func (h Handlers) Select(c *fiber.Ctx) error {
 		}
 	}
 
-	h.log.Debug(
+	h.Log.Debug(
 		"обработан запрос на получение",
 		slog.String("source", source),
 		slog.String("op", op),
 	)
 
-	return c.JSON(SelectResponse{
+	return c.JSON(&SelectResponse{
 		Status:  fiber.StatusOK,
-		Message: "data found",
+		Message: SelectSuccess,
 		Result:  r,
 	})
 }
