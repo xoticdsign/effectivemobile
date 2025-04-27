@@ -1,4 +1,7 @@
-# GIT ###
+EFFECTIVEMOBILE := cmd/effectivemobile/main.go 
+MIGRATOR := cmd/migrator/main.go
+
+# GIT ##
 
 COMMIT_MESSAGE ?= .
 TAG_NAME ?= .
@@ -33,9 +36,6 @@ test:
 
 # GO ###
 
-EFFECTIVEMOBILE := cmd/effectivemobile/main.go 
-MIGRATOR := cmd/migrator/main.go
-
 run:
 	go run $(EFFECTIVEMOBILE)
 
@@ -44,3 +44,11 @@ migrate:
 
 build:
 	go build -o build/effectivemobile $(EFFECTIVEMOBILE)
+
+# SWAG #
+
+swag:
+	cp $(EFFECTIVEMOBILE) . && \
+	swag fmt && \
+	swag init && \
+	rm main.go
