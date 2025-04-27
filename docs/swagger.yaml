@@ -156,7 +156,7 @@ info:
     name: MIT
     url: https://mit-license.org/
   title: EffectiveMobile
-  version: 1.0.0
+  version: 1.0.1
 paths:
   /create:
     post:

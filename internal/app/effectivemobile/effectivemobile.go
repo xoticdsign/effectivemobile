@@ -64,9 +64,9 @@ func New(config config.EffectiveMobileConfig, storage *storage.Storage, log *slo
 			var e *fiber.Error
 
 			if errors.As(err, &e) {
-				return c.JSON(e)
+				return c.Status(e.Code).JSON(e)
 			}
-			return c.JSON(fiber.ErrInternalServerError)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.ErrInternalServerError)
 		},
 		AppName: "effectivemobile",
 	})
