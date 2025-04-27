@@ -54,12 +54,12 @@ func TestDeleteByID_Functional(t *testing.T) {
 			},
 		},
 		{
-			name:         "bad request case",
+			name:         "not found case",
 			inMethod:     http.MethodDelete,
 			inBody:       effectivemobileapp.DeleteByIDRequest{},
 			inTarget:     fmt.Sprintf("/%s", effectivemobileapp.DeleteByIDHanlder),
 			expectedErr:  nil,
-			expectedCode: fiber.StatusBadRequest,
+			expectedCode: fiber.StatusNotFound,
 			expectedBody: effectivemobileapp.DeleteByIDResponse{},
 		},
 		{
@@ -159,14 +159,12 @@ func TestUpdateByID_Functional(t *testing.T) {
 			},
 		},
 		{
-			name:     "bad request case",
-			inMethod: http.MethodPut,
-			inBody: effectivemobileapp.UpdateByIDRequest{
-				Name: "test",
-			},
+			name:         "not found case",
+			inMethod:     http.MethodPut,
+			inBody:       effectivemobileapp.UpdateByIDRequest{},
 			inTarget:     fmt.Sprintf("/%s", effectivemobileapp.UpdateByIDHandler),
 			expectedErr:  nil,
-			expectedCode: fiber.StatusBadRequest,
+			expectedCode: fiber.StatusNotFound,
 			expectedBody: effectivemobileapp.UpdateByIDResponse{},
 		},
 		{

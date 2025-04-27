@@ -18,9 +18,9 @@ const source = "effectivemobile"
 
 var (
 	DeleteByIDHanlder    = "delete"
-	DeleteByIDParameters = ":id?"
+	DeleteByIDParameters = ":id"
 	UpdateByIDHandler    = "update"
-	UpdateByIDParameters = ":id?"
+	UpdateByIDParameters = ":id"
 	CreateHandler        = "create"
 	SelectHandler        = "select"
 	SelectParameters     = ":id?"
