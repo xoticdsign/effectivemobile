@@ -1,0 +1,278 @@
+basePath: /
+consumes:
+- application/json
+definitions:
+  effectivemobile.CreateRequest:
+    properties:
+      name:
+        type: string
+      patronymic:
+        type: string
+      surname:
+        type: string
+    type: object
+  effectivemobile.CreateResponse:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+    type: object
+  effectivemobile.DeleteByIDResponse:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+    type: object
+  effectivemobile.ErrorResponse:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+    type: object
+  effectivemobile.SelectResponse:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+      result:
+        items:
+          $ref: '#/definitions/postgresql.Row'
+        type: array
+    type: object
+  effectivemobile.UpdateByIDRequest:
+    properties:
+      age:
+        type: integer
+      gender:
+        type: string
+      name:
+        type: string
+      nationality:
+        type: string
+      patronymic:
+        type: string
+      surname:
+        type: string
+    type: object
+  effectivemobile.UpdateByIDResponse:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+    type: object
+  postgresql.Row:
+    properties:
+      age:
+        type: integer
+      gender:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      nationality:
+        type: string
+      patronymic:
+        type: string
+      surname:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: xoticdollarsign@outlook.com
+    name: Епишов Роман
+    url: https://github.com/xoticdsign
+  description: Сервис предоставляет API для создания, обновления, удаления и поиска
+    людей с автозаполнением данных на основе внешних сервисов.
+  license:
+    name: MIT
+    url: https://mit-license.org/
+  title: EffectiveMobile
+  version: 1.0.0
+paths:
+  /create:
+    post:
+      description: Создает новую запись с автозаполнением возраста, пола и национальности
+        при помощи открытых API.
+      operationId: create
+      parameters:
+      - description: Тело запроса
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/effectivemobile.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Возвращается, если создание прошло успешно
+          schema:
+            $ref: '#/definitions/effectivemobile.CreateResponse'
+        "400":
+          description: Возвращается, если запрос был сформирован неправильно
+          schema:
+            $ref: '#/definitions/effectivemobile.ErrorResponse'
+        "404":
+          description: Возвращается, если запрашиваемая запись не была найдена/во
+            внешних API нет данных
+          schema:
+            $ref: '#/definitions/effectivemobile.ErrorResponse'
+        "405":
+          description: Возвращается, если был использован неправильный метод
+          schema:
+            $ref: '#/definitions/effectivemobile.ErrorResponse'
+        "500":
+          description: Возвращается, если во время работы хранилища/клиента произошла
+            ошибка
+          schema:
+            $ref: '#/definitions/effectivemobile.ErrorResponse'
+      summary: Создание записи
+      tags:
+      - Операции
+  /delete/{id}:
+    delete:
+      description: Удаляет запись из базы данных по заданному идентификатору.
+      operationId: delete
+      parameters:
+      - description: Идентификатор записи
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Возвращается, если удаление прошло успешно
+          schema:
+            $ref: '#/definitions/effectivemobile.DeleteByIDResponse'
+        "400":
+          description: Возвращается, если запрос был сформирован неправильно
+          schema:
+            $ref: '#/definitions/effectivemobile.ErrorResponse'
+        "404":
+          description: Возвращается, если запрашиваемая запись не была найдена
+          schema:
+            $ref: '#/definitions/effectivemobile.ErrorResponse'
+        "405":
+          description: Возвращается, если был использован неправильный метод
+          schema:
+            $ref: '#/definitions/effectivemobile.ErrorResponse'
+        "500":
+          description: Возвращается, если во время работы хранилища произошла ошибка
+          schema:
+            $ref: '#/definitions/effectivemobile.ErrorResponse'
+      summary: Удаление записи по ID
+      tags:
+      - Операции
+  /select:
+    get:
+      description: Возвращает запись/список записей с возможностью фильтрации и пагинации.
+      operationId: select
+      parameters:
+      - description: Идентификатор записи
+        in: query
+        name: id
+        type: string
+      - description: Тип фильтра (name, surname, etc.)
+        in: query
+        name: filter
+        type: string
+      - description: Значение фильтра
+        in: query
+        name: value
+        type: string
+      - description: Начальная позиция
+        in: query
+        name: start
+        type: integer
+      - description: Конечная позиция
+        in: query
+        name: end
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Возвращается, если получение прошло успешно
+          schema:
+            $ref: '#/definitions/effectivemobile.SelectResponse'
+        "400":
+          description: Возвращается, если запрос был сформирован неправильно
+          schema:
+            $ref: '#/definitions/effectivemobile.ErrorResponse'
+        "404":
+          description: Возвращается, если запрашиваемая запись(и) не была найдена
+          schema:
+            $ref: '#/definitions/effectivemobile.ErrorResponse'
+        "405":
+          description: Возвращается, если был использован неправильный метод
+          schema:
+            $ref: '#/definitions/effectivemobile.ErrorResponse'
+        "500":
+          description: Возвращается, если во время работы хранилища произошла ошибка
+          schema:
+            $ref: '#/definitions/effectivemobile.ErrorResponse'
+      summary: Получение записи(ей)
+      tags:
+      - Операции
+  /update/{id}:
+    put:
+      description: Обновляет существующую записи в базе данных по ID при помощи данных
+        получаемых в теле запроса.
+      operationId: update
+      parameters:
+      - description: Идентификатор записи
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Тело запроса
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/effectivemobile.UpdateByIDRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Возвращается, если обновление прошло успешно
+          schema:
+            $ref: '#/definitions/effectivemobile.UpdateByIDResponse'
+        "400":
+          description: Возвращается, если запрос был сформирован неправильно
+          schema:
+            $ref: '#/definitions/effectivemobile.ErrorResponse'
+        "404":
+          description: Возвращается, если запрашиваемая запись не была найдена
+          schema:
+            $ref: '#/definitions/effectivemobile.ErrorResponse'
+        "405":
+          description: Возвращается, если был использован неправильный метод
+          schema:
+            $ref: '#/definitions/effectivemobile.ErrorResponse'
+        "409":
+          description: Возвращается, если переданные данные ничем не отличаются от
+            уже существующих
+          schema:
+            $ref: '#/definitions/effectivemobile.ErrorResponse'
+        "500":
+          description: Возвращается, если во время работы хранилища произошла ошибка
+          schema:
+            $ref: '#/definitions/effectivemobile.ErrorResponse'
+      summary: Обновление записи по ID
+      tags:
+      - Операции
+produces:
+- application/json
+schemes:
+- http
+swagger: "2.0"

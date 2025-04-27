@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -35,7 +36,6 @@ func TestDeleteByID_Functional(t *testing.T) {
 	cases := []struct {
 		name         string
 		inMethod     string
-		inBody       effectivemobileapp.DeleteByIDRequest
 		inTarget     string
 		expectedErr  error
 		expectedCode int
@@ -44,19 +44,17 @@ func TestDeleteByID_Functional(t *testing.T) {
 		{
 			name:         "happy case",
 			inMethod:     http.MethodDelete,
-			inBody:       effectivemobileapp.DeleteByIDRequest{},
 			inTarget:     fmt.Sprintf("/%s/1", effectivemobileapp.DeleteByIDHanlder),
 			expectedErr:  nil,
 			expectedCode: fiber.StatusOK,
 			expectedBody: effectivemobileapp.DeleteByIDResponse{
-				Status:  fiber.StatusOK,
+				Code:    fiber.StatusOK,
 				Message: effectivemobileapp.DeleteByIDSuccess,
 			},
 		},
 		{
 			name:         "not found case",
 			inMethod:     http.MethodDelete,
-			inBody:       effectivemobileapp.DeleteByIDRequest{},
 			inTarget:     fmt.Sprintf("/%s", effectivemobileapp.DeleteByIDHanlder),
 			expectedErr:  nil,
 			expectedCode: fiber.StatusNotFound,
@@ -65,7 +63,6 @@ func TestDeleteByID_Functional(t *testing.T) {
 		{
 			name:         "wrong method case",
 			inMethod:     http.MethodGet,
-			inBody:       effectivemobileapp.DeleteByIDRequest{},
 			inTarget:     fmt.Sprintf("/%s/1", effectivemobileapp.DeleteByIDHanlder),
 			expectedErr:  nil,
 			expectedCode: fiber.StatusMethodNotAllowed,
@@ -74,7 +71,6 @@ func TestDeleteByID_Functional(t *testing.T) {
 		{
 			name:         "storage not found case",
 			inMethod:     http.MethodDelete,
-			inBody:       effectivemobileapp.DeleteByIDRequest{},
 			inTarget:     fmt.Sprintf("/%s/s404", effectivemobileapp.DeleteByIDHanlder),
 			expectedErr:  nil,
 			expectedCode: fiber.StatusNotFound,
@@ -83,7 +79,6 @@ func TestDeleteByID_Functional(t *testing.T) {
 		{
 			name:         "storage internal case",
 			inMethod:     http.MethodDelete,
-			inBody:       effectivemobileapp.DeleteByIDRequest{},
 			inTarget:     fmt.Sprintf("/%s/s500", effectivemobileapp.DeleteByIDHanlder),
 			expectedErr:  nil,
 			expectedCode: fiber.StatusInternalServerError,
@@ -93,9 +88,7 @@ func TestDeleteByID_Functional(t *testing.T) {
 
 	for _, c := range cases {
 		s.T.Run(c.name, func(t *testing.T) {
-			b, _ := json.Marshal(c.inBody)
-
-			r := httptest.NewRequest(c.inMethod, c.inTarget, bytes.NewBuffer(b))
+			r := httptest.NewRequest(c.inMethod, c.inTarget, nil)
 			r.Header.Set("Content-Type", "application/json")
 
 			resp, err := f.Test(r, int(s.Config.EffectiveMobile.Client.Timeout))
@@ -154,7 +147,7 @@ func TestUpdateByID_Functional(t *testing.T) {
 			expectedErr:  nil,
 			expectedCode: fiber.StatusOK,
 			expectedBody: effectivemobileapp.UpdateByIDResponse{
-				Status:  fiber.StatusOK,
+				Code:    fiber.StatusOK,
 				Message: effectivemobileapp.UpdateByIDSuccess,
 			},
 		},
@@ -186,12 +179,12 @@ func TestUpdateByID_Functional(t *testing.T) {
 			expectedBody: effectivemobileapp.UpdateByIDResponse{},
 		},
 		{
-			name:         "storage bad request case",
+			name:         "storage conflict case",
 			inMethod:     http.MethodPut,
 			inBody:       effectivemobileapp.UpdateByIDRequest{},
-			inTarget:     fmt.Sprintf("/%s/s400", effectivemobileapp.UpdateByIDHandler),
+			inTarget:     fmt.Sprintf("/%s/s409", effectivemobileapp.UpdateByIDHandler),
 			expectedErr:  nil,
-			expectedCode: fiber.StatusBadRequest,
+			expectedCode: fiber.StatusConflict,
 			expectedBody: effectivemobileapp.UpdateByIDResponse{},
 		},
 		{
@@ -269,7 +262,7 @@ func TestCreate_Functional(t *testing.T) {
 			expectedErr:  nil,
 			expectedCode: fiber.StatusOK,
 			expectedBody: effectivemobileapp.CreateResponse{
-				Status:  fiber.StatusOK,
+				Code:    fiber.StatusOK,
 				Message: effectivemobileapp.CreateSuccess,
 			},
 		},
@@ -376,7 +369,7 @@ func TestSelect_Functional(t *testing.T) {
 	cases := []struct {
 		name         string
 		inMethod     string
-		inBody       *effectivemobileapp.SelectRequest
+		inParameters []string
 		inTarget     string
 		expectedErr  error
 		expectedCode int
@@ -385,12 +378,12 @@ func TestSelect_Functional(t *testing.T) {
 		{
 			name:         "happy case",
 			inMethod:     http.MethodGet,
-			inBody:       &effectivemobileapp.SelectRequest{},
+			inParameters: nil,
 			inTarget:     fmt.Sprintf("/%s/1", effectivemobileapp.SelectHandler),
 			expectedErr:  nil,
 			expectedCode: fiber.StatusOK,
 			expectedBody: effectivemobileapp.SelectResponse{
-				Status:  fiber.StatusOK,
+				Code:    fiber.StatusOK,
 				Message: effectivemobileapp.SelectSuccess,
 				Result:  []storage.Row{},
 			},
@@ -398,7 +391,7 @@ func TestSelect_Functional(t *testing.T) {
 		{
 			name:         "bad request case",
 			inMethod:     http.MethodGet,
-			inBody:       nil,
+			inParameters: nil,
 			inTarget:     fmt.Sprintf("/%s", effectivemobileapp.SelectHandler),
 			expectedErr:  nil,
 			expectedCode: fiber.StatusBadRequest,
@@ -407,7 +400,7 @@ func TestSelect_Functional(t *testing.T) {
 		{
 			name:         "worng method case",
 			inMethod:     http.MethodPost,
-			inBody:       &effectivemobileapp.SelectRequest{},
+			inParameters: nil,
 			inTarget:     fmt.Sprintf("/%s/1", effectivemobileapp.SelectHandler),
 			expectedErr:  nil,
 			expectedCode: fiber.StatusMethodNotAllowed,
@@ -416,7 +409,7 @@ func TestSelect_Functional(t *testing.T) {
 		{
 			name:         "storage not found case",
 			inMethod:     http.MethodGet,
-			inBody:       &effectivemobileapp.SelectRequest{},
+			inParameters: nil,
 			inTarget:     fmt.Sprintf("/%s/s404", effectivemobileapp.SelectHandler),
 			expectedErr:  nil,
 			expectedCode: fiber.StatusNotFound,
@@ -425,7 +418,7 @@ func TestSelect_Functional(t *testing.T) {
 		{
 			name:         "storage internal case",
 			inMethod:     http.MethodGet,
-			inBody:       &effectivemobileapp.SelectRequest{},
+			inParameters: nil,
 			inTarget:     fmt.Sprintf("/%s/s500", effectivemobileapp.SelectHandler),
 			expectedErr:  nil,
 			expectedCode: fiber.StatusInternalServerError,
@@ -435,13 +428,15 @@ func TestSelect_Functional(t *testing.T) {
 
 	for _, c := range cases {
 		s.T.Run(c.name, func(t *testing.T) {
-			var b []byte
+			var target string
 
-			if c.inBody != nil {
-				b, _ = json.Marshal(c.inBody)
+			if c.inParameters != nil {
+				target = fmt.Sprintf("%s?%s", c.inTarget, strings.Join(c.inParameters, "&&"))
+			} else {
+				target = c.inTarget
 			}
 
-			r := httptest.NewRequest(c.inMethod, c.inTarget, bytes.NewBuffer(b))
+			r := httptest.NewRequest(c.inMethod, target, nil)
 			r.Header.Set("Content-Type", "application/json")
 
 			resp, err := f.Test(r, int(s.Config.EffectiveMobile.Client.Timeout))

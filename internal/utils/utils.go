@@ -36,6 +36,10 @@ func NormalizeInput(values map[string]map[string]string) (map[string]string, err
 				m[k] = strings.ToUpper(t)
 
 			case "title":
+				if len(t) == 0 {
+					continue
+				}
+
 				runes := []rune(t)
 				runes[0] = unicode.ToUpper(runes[0])
 

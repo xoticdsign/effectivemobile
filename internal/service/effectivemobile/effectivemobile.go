@@ -13,11 +13,11 @@ import (
 )
 
 var (
-	ErrClientNotFound    = fmt.Errorf("у клиента нет данных")
-	ErrClientInternal    = fmt.Errorf("внутренняя ошибка клиента")
-	ErrStorageNotFound   = fmt.Errorf("у хранилища нет данных")
-	ErrStorageBadRequest = fmt.Errorf("запрос сформирофан некоректно")
-	ErrStorageInternal   = fmt.Errorf("внутренняя ошибка хранилища")
+	ErrClientNotFound  = fmt.Errorf("у клиента нет данных")
+	ErrClientInternal  = fmt.Errorf("внутренняя ошибка клиента")
+	ErrStorageNotFound = fmt.Errorf("у хранилища нет данных")
+	ErrStorageConflict = fmt.Errorf("запрос сформирофан некоректно")
+	ErrStorageInternal = fmt.Errorf("внутренняя ошибка хранилища")
 )
 
 const source = "service"
@@ -142,7 +142,7 @@ func (h Handlers) UpdateByID(id string, data []byte) error {
 				slog.Any("error", err),
 			)
 
-			return fmt.Errorf("%w: %v", ErrStorageBadRequest, err)
+			return fmt.Errorf("%w: %v", ErrStorageConflict, err)
 
 		case errors.Is(err, sql.ErrNoRows):
 			h.log.Error(
@@ -162,7 +162,7 @@ func (h Handlers) UpdateByID(id string, data []byte) error {
 				slog.Any("error", err),
 			)
 
-			return fmt.Errorf("%w: %v", ErrStorageBadRequest, err)
+			return fmt.Errorf("%w: %v", ErrStorageConflict, err)
 
 		default:
 			h.log.Error(
@@ -361,8 +361,8 @@ func (u UnimplementedHandlers) UpdateByID(id string, data []byte) error {
 	case "s404":
 		return ErrStorageNotFound
 
-	case "s400":
-		return ErrStorageBadRequest
+	case "s409":
+		return ErrStorageConflict
 
 	case "s500":
 		return ErrStorageInternal

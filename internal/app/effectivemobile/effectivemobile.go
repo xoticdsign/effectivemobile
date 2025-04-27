@@ -7,7 +7,10 @@ import (
 	"net"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/swagger"
 
+	_ "github.com/xoticdsign/effectivemobile/docs"
 	"github.com/xoticdsign/effectivemobile/internal/client"
 	effectivemobileservice "github.com/xoticdsign/effectivemobile/internal/service/effectivemobile"
 	storage "github.com/xoticdsign/effectivemobile/internal/storage/postgresql"
@@ -78,10 +81,17 @@ func New(config config.EffectiveMobileConfig, storage *storage.Storage, log *slo
 		Config:  config,
 	}
 
+	f.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+		AllowMethods: "GET,POST,PUT,DELETE",
+		AllowHeaders: "Origin, Content-Type, Accept",
+	}))
+
 	f.Delete(fmt.Sprintf("/%s/%s", DeleteByIDHanlder, DeleteByIDParameters), h.DeleteByID)
 	f.Put(fmt.Sprintf("/%s/%s", UpdateByIDHandler, UpdateByIDParameters), h.UpdateByID)
 	f.Post(fmt.Sprintf("/%s", CreateHandler), h.Create)
 	f.Get(fmt.Sprintf("/%s/%s", SelectHandler, SelectParameters), h.Select)
+	f.Get("/swagger/*", swagger.New(swagger.ConfigDefault))
 
 	return &App{
 		Server: Server{
@@ -132,13 +142,30 @@ type Handlers struct {
 	Config  config.EffectiveMobileConfig
 }
 
-type DeleteByIDRequest struct{}
-
-type DeleteByIDResponse struct {
-	Status  int    `json:"status"`
+type ErrorResponse struct {
+	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
+type DeleteByIDResponse struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+// @description Удаляет запись из базы данных по заданному идентификатору.
+//
+// @id          delete
+// @tags        Операции
+//
+// @summary     Удаление записи по ID
+// @produce     json
+// @param       id  path     string             true "Идентификатор записи"
+// @success     200 {object} DeleteByIDResponse "Возвращается, если удаление прошло успешно"
+// @failure     400 {object} ErrorResponse      "Возвращается, если запрос был сформирован неправильно"
+// @failure     404 {object} ErrorResponse      "Возвращается, если запрашиваемая запись не была найдена"
+// @failure     405 {object} ErrorResponse      "Возвращается, если был использован неправильный метод"
+// @failure     500 {object} ErrorResponse      "Возвращается, если во время работы хранилища произошла ошибка"
+// @router      /delete/{id} [delete]
 func (h Handlers) DeleteByID(c *fiber.Ctx) error {
 	const op = "effectivemobile.DeleteByID()"
 
@@ -178,7 +205,7 @@ func (h Handlers) DeleteByID(c *fiber.Ctx) error {
 	)
 
 	return c.JSON(&DeleteByIDResponse{
-		Status:  fiber.StatusOK,
+		Code:    fiber.StatusOK,
 		Message: DeleteByIDSuccess,
 	})
 }
@@ -193,10 +220,26 @@ type UpdateByIDRequest struct {
 }
 
 type UpdateByIDResponse struct {
-	Status  int    `json:"status"`
+	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
+// @description Обновляет существующую записи в базе данных по ID при помощи данных получаемых в теле запроса.
+//
+// @id          update
+// @tags        Операции
+//
+// @summary     Обновление записи по ID
+// @produce     json
+// @param       id   path     string             true "Идентификатор записи"
+// @param       body body     UpdateByIDRequest  true "Тело запроса"
+// @success     200  {object} UpdateByIDResponse "Возвращается, если обновление прошло успешно"
+// @failure     400  {object} ErrorResponse      "Возвращается, если запрос был сформирован неправильно"
+// @failure     404  {object} ErrorResponse      "Возвращается, если запрашиваемая запись не была найдена"
+// @failure     405  {object} ErrorResponse      "Возвращается, если был использован неправильный метод"
+// @failure     409  {object} ErrorResponse      "Возвращается, если переданные данные ничем не отличаются от уже существующих"
+// @failure     500  {object} ErrorResponse      "Возвращается, если во время работы хранилища произошла ошибка"
+// @router      /update/{id} [put]
 func (h Handlers) UpdateByID(c *fiber.Ctx) error {
 	const op = "effectivemobile.UpdateByID()"
 
@@ -240,8 +283,8 @@ func (h Handlers) UpdateByID(c *fiber.Ctx) error {
 		case errors.Is(err, effectivemobileservice.ErrStorageNotFound):
 			return fiber.ErrNotFound
 
-		case errors.Is(err, effectivemobileservice.ErrStorageBadRequest):
-			return fiber.ErrBadRequest
+		case errors.Is(err, effectivemobileservice.ErrStorageConflict):
+			return fiber.ErrConflict
 
 		default:
 			return fiber.ErrInternalServerError
@@ -255,7 +298,7 @@ func (h Handlers) UpdateByID(c *fiber.Ctx) error {
 	)
 
 	return c.JSON(&UpdateByIDResponse{
-		Status:  fiber.StatusOK,
+		Code:    fiber.StatusOK,
 		Message: UpdateByIDSuccess,
 	})
 }
@@ -267,10 +310,24 @@ type CreateRequest struct {
 }
 
 type CreateResponse struct {
-	Status  int    `json:"status"`
+	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
+// @description Создает новую запись с автозаполнением возраста, пола и национальности при помощи открытых API.
+//
+// @id          create
+// @tags        Операции
+//
+// @summary     Создание записи
+// @produce     json
+// @param       body body     CreateRequest  true "Тело запроса"
+// @success     200  {object} CreateResponse "Возвращается, если создание прошло успешно"
+// @failure     400    {object} ErrorResponse  "Возвращается, если запрос был сформирован неправильно"
+// @failure     404  {object} ErrorResponse  "Возвращается, если запрашиваемая запись не была найдена/во внешних API нет данных"
+// @failure     405    {object} ErrorResponse  "Возвращается, если был использован неправильный метод"
+// @failure     500  {object} ErrorResponse  "Возвращается, если во время работы хранилища/клиента произошла ошибка"
+// @router      /create [post]
 func (h Handlers) Create(c *fiber.Ctx) error {
 	const op = "effectivemobile.UpdateByID()"
 
@@ -337,19 +394,9 @@ func (h Handlers) Create(c *fiber.Ctx) error {
 	)
 
 	return c.JSON(&CreateResponse{
-		Status:  fiber.StatusOK,
+		Code:    fiber.StatusOK,
 		Message: CreateSuccess,
 	})
-}
-
-type SelectRequest struct {
-	Limit  []int  `json:"limit"`
-	Filter Filter `json:"filter"`
-}
-
-type Filter struct {
-	Type  string `json:"type"`
-	Value string `json:"value"`
 }
 
 var (
@@ -362,104 +409,110 @@ var (
 )
 
 type SelectResponse struct {
-	Status  int           `json:"status"`
+	Code    int           `json:"code"`
 	Message string        `json:"message"`
 	Result  []storage.Row `json:"result"`
 }
 
+// @description Возвращает запись/список записей с возможностью фильтрации и пагинации.
+//
+// @id          select
+// @tags        Операции
+//
+// @summary     Получение записи(ей)
+// @produce     json
+// @param       id     query    string         false "Идентификатор записи"
+// @param       filter query    string         false "Тип фильтра (name, surname, etc.)"
+// @param       value  query    string         false "Значение фильтра"
+// @param       start  query    int            false "Начальная позиция"
+// @param       end    query    int            false "Конечная позиция"
+// @success     200    {object} SelectResponse "Возвращается, если получение прошло успешно"
+// @failure     400  {object} ErrorResponse  "Возвращается, если запрос был сформирован неправильно"
+// @failure     404    {object} ErrorResponse  "Возвращается, если запрашиваемая запись(и) не была найдена"
+// @failure     405  {object} ErrorResponse  "Возвращается, если был использован неправильный метод"
+// @failure     500    {object} ErrorResponse  "Возвращается, если во время работы хранилища произошла ошибка"
+// @router      /select [get]
 func (h Handlers) Select(c *fiber.Ctx) error {
 	const op = "effectivemobile.Select()"
 
-	var body SelectRequest
+	var id string
 
-	if c.Body() != nil {
-		err := c.BodyParser(&body)
-		if err != nil {
-			h.Log.Debug(
-				"неправильно сформирован запрос",
-				slog.String("source", source),
-				slog.String("op", op),
-				slog.Any("error", err),
-			)
-
-			return fiber.ErrBadRequest
-		}
+	id = c.Params("id")
+	if id == "" {
+		id = c.Query("id")
 	}
 
-	id := c.Params("id")
-	if id != "" {
-		body = SelectRequest{}
+	filter := c.Query("filter")
+	value := c.Query("value")
+	start := c.QueryInt("start", 0)
+	end := c.QueryInt("end", h.Config.SelectLimit)
+
+	if start >= end {
+		h.Log.Debug(
+			"неправильно сформирован запрос",
+			slog.String("source", source),
+			slog.String("op", op),
+			slog.Any("error", "start parameter can't be greater than the end"),
+		)
+
+		return fiber.ErrBadRequest
+	}
+
+	if id == "" && (filter == "" && value == "") {
+		h.Log.Debug(
+			"неправильно сформирован запрос",
+			slog.String("source", source),
+			slog.String("op", op),
+			slog.Any("error", "both filter and id parameters are empty"),
+		)
+
+		return fiber.ErrBadRequest
+	}
+
+	if id != "" && (filter != "" && value != "") {
+		h.Log.Debug(
+			"неправильно сформирован запрос",
+			slog.String("source", source),
+			slog.String("op", op),
+			slog.Any("error", "filter and id parameters can't be used at the same time"),
+		)
+
+		return fiber.ErrBadRequest
+	}
+
+	if (filter != "" && value == "") || (filter == "" && value != "") {
+		h.Log.Debug(
+			"неправильно сформирован запрос",
+			slog.String("source", source),
+			slog.String("op", op),
+			slog.Any("error", "filter incomplete"),
+		)
+		return fiber.ErrBadRequest
+	}
+
+	filters := map[string]bool{
+		FilterName: true, FilterSurname: true, FilterPatronymic: true,
+		FilterAge: true, FilterGender: true, FilterNationality: true,
+	}
+
+	if filter != "" && !filters[filter] {
+		h.Log.Debug(
+			"неправильно сформирован запрос",
+			slog.String("source", source),
+			slog.String("op", op),
+			slog.Any("error", "unknown filter"),
+		)
+		return fiber.ErrBadRequest
 	}
 
 	h.Log.Debug(
 		"получен запрос на получение",
 		slog.String("source", source),
 		slog.String("op", op),
-		slog.Any("parameters", []string{id}),
-		slog.Any("body", body),
+		slog.Any("parameters", []interface{}{id, filter, value, start, end}),
 	)
 
-	if id == "" && len(c.Body()) == 0 {
-		h.Log.Debug(
-			"неправильно сформирован запрос",
-			slog.String("source", source),
-			slog.String("op", op),
-			slog.Any("error", "empty body and id parameter"),
-		)
-
-		return fiber.ErrBadRequest
-	}
-
-	if body.Limit == nil {
-		body.Limit = []int{0, h.Config.SelectLimit}
-	}
-
-	filters := []string{FilterName, FilterSurname, FilterPatronymic, FilterAge, FilterGender, FilterNationality}
-
-	if body.Filter.Type == "" {
-		if body.Filter.Value != "" {
-			h.Log.Debug(
-				"неправильно сформирован запрос",
-				slog.String("source", source),
-				slog.String("op", op),
-				slog.Any("error", "malfored body"),
-			)
-
-			return fiber.ErrBadRequest
-		}
-	} else {
-		if body.Filter.Value == "" {
-			h.Log.Debug(
-				"неправильно сформирован запрос",
-				slog.String("source", source),
-				slog.String("op", op),
-				slog.Any("error", "malfored body"),
-			)
-
-			return fiber.ErrBadRequest
-		}
-
-		exists := false
-
-		for _, filter := range filters {
-			if body.Filter.Type == filter {
-				exists = true
-			}
-		}
-
-		if !exists {
-			h.Log.Debug(
-				"неправильно сформирован запрос",
-				slog.String("source", source),
-				slog.String("op", op),
-				slog.Any("error", "malfored body"),
-			)
-
-			return fiber.ErrBadRequest
-		}
-	}
-
-	r, err := h.Service.Select(id, body.Limit, body.Filter.Type, body.Filter.Value)
+	r, err := h.Service.Select(id, []int{start, end}, filter, value)
 	if err != nil {
 		switch {
 		case errors.Is(err, effectivemobileservice.ErrStorageNotFound):
@@ -477,7 +530,7 @@ func (h Handlers) Select(c *fiber.Ctx) error {
 	)
 
 	return c.JSON(&SelectResponse{
-		Status:  fiber.StatusOK,
+		Code:    fiber.StatusOK,
 		Message: SelectSuccess,
 		Result:  r,
 	})
