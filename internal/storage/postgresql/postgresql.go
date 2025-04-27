@@ -3,18 +3,20 @@ package postgresql
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
-	"unicode"
 
 	_ "github.com/lib/pq"
 
+	"github.com/xoticdsign/effectivemobile/internal/utils"
 	"github.com/xoticdsign/effectivemobile/internal/utils/config"
 )
 
 var (
 	ErrNoNewValues              = fmt.Errorf("в запросе не были предотавлены новые данные")
+	ErrNormalization            = fmt.Errorf("ошибка нормализации")
 	ErrConstraint               = fmt.Errorf("был нарушен check")
 	ErrOperationDidNotSuccessed = fmt.Errorf("операция не была выполнена")
 )
@@ -162,21 +164,38 @@ func buildUpdateByIDQuery(id string, original []byte, update []byte, config conf
 	json.Unmarshal(original, &o)
 	json.Unmarshal(update, &u)
 
+	n, err := utils.NormalizeInput(map[string]map[string]string{
+		"name":        {u.Name: "title"},
+		"surname":     {u.Surname: "title"},
+		"patronymic":  {u.Patronymic: "title"},
+		"gender":      {u.Gender: "lowercase"},
+		"nationality": {u.Nationality: "uppercase"},
+	})
+	if err != nil {
+		return "", ErrNormalization
+	}
+
+	name := n["name"]
+	surname := n["surname"]
+	patronymic := n["patronymic"]
+	gender := n["gender"]
+	nationality := n["nationality"]
+
 	count := 0
 	t := []string{}
 
-	if o.Name != u.Name && u.Name != "" {
-		t = append(t, fmt.Sprintf("name='%s'", u.Name))
+	if o.Name != name && name != "" {
+		t = append(t, fmt.Sprintf("name='%s'", name))
 		count++
 	}
 
-	if o.Surname != u.Surname && u.Surname != "" {
-		t = append(t, fmt.Sprintf("surname='%s'", u.Surname))
+	if o.Surname != surname && surname != "" {
+		t = append(t, fmt.Sprintf("surname='%s'", surname))
 		count++
 	}
 
-	if o.Patronymic != u.Patronymic && u.Patronymic != "" {
-		t = append(t, fmt.Sprintf("patronymic='%s'", u.Patronymic))
+	if o.Patronymic != patronymic && patronymic != "" {
+		t = append(t, fmt.Sprintf("patronymic='%s'", patronymic))
 		count++
 	}
 
@@ -185,13 +204,13 @@ func buildUpdateByIDQuery(id string, original []byte, update []byte, config conf
 		count++
 	}
 
-	if o.Gender != u.Gender && u.Gender != "" {
-		t = append(t, fmt.Sprintf("gender='%s'", u.Gender))
+	if o.Gender != gender && gender != "" {
+		t = append(t, fmt.Sprintf("gender='%s'", gender))
 		count++
 	}
 
-	if o.Nationality != u.Nationality && u.Nationality != "" {
-		t = append(t, fmt.Sprintf("nationality='%s'", u.Nationality))
+	if o.Nationality != nationality && nationality != "" {
+		t = append(t, fmt.Sprintf("nationality='%s'", nationality))
 		count++
 	}
 
@@ -238,7 +257,10 @@ func (h Handlers) UpdateByID(id string, data []byte) error {
 
 	query, err := buildUpdateByIDQuery(id, originalByte, data, h.config)
 	if err != nil {
-		return ErrNoNewValues
+		if errors.Is(err, ErrNoNewValues) {
+			return ErrNoNewValues
+		}
+		return err
 	}
 
 	result, err := tx.Exec(query)
@@ -279,6 +301,23 @@ func (h Handlers) Create(name string, surname string, patronymic string, age int
 	}
 	defer tx.Rollback()
 
+	n, err := utils.NormalizeInput(map[string]map[string]string{
+		"name":        {name: "title"},
+		"surname":     {surname: "title"},
+		"patronymic":  {patronymic: "title"},
+		"gender":      {gender: "lowercase"},
+		"nationality": {nationality: "uppercase"},
+	})
+	if err != nil {
+		return ErrNormalization
+	}
+
+	name = n["name"]
+	surname = n["surname"]
+	patronymic = n["patronymic"]
+	gender = n["gender"]
+	nationality = n["nationality"]
+
 	result, err := tx.Exec(fmt.Sprintf("INSERT INTO %s (name, surname, patronymic, age, gender, nationality) VALUES('%s', '%s', '%s', %v, '%s', '%s');", h.config.Table, name, surname, patronymic, age, gender, nationality))
 	if err != nil {
 		return err
@@ -302,34 +341,63 @@ func (h Handlers) Create(name string, surname string, patronymic string, age int
 	return tx.Commit()
 }
 
-func buildSelectQuery(id string, limit []int, filter string, value string, config config.PostgreSQLConfig) string {
+func buildSelectQuery(id string, limit []int, filter string, value string, config config.PostgreSQLConfig) (string, error) {
 	if id != "" {
-		return fmt.Sprintf("SELECT * FROM %s WHERE id=%s;", config.Table, id)
+		return fmt.Sprintf("SELECT * FROM %s WHERE id=%s;", config.Table, id), nil
 	} else {
 		if filter == "" {
-			return fmt.Sprintf("SELECT * FROM %s LIMIT %v OFFSET %v;", config.Table, limit[1], limit[0])
+			return fmt.Sprintf("SELECT * FROM %s LIMIT %v OFFSET %v;", config.Table, limit[1], limit[0]), nil
 		} else {
 			switch {
-			case filter == "name" || filter == "surname" || filter == "patronymic":
-				runes := []rune(value)
-				runes[0] = unicode.ToUpper(runes[0])
-
-				for i := 1; i < len(runes); i++ {
-					runes[i] = unicode.ToLower(runes[i])
+			case filter == "name":
+				n, err := utils.NormalizeInput(map[string]map[string]string{
+					"name": {value: "title"},
+				})
+				if err != nil {
+					return "", ErrNormalization
 				}
+				value = n["name"]
 
-				value = string(runes)
+			case filter == "surname":
+				n, err := utils.NormalizeInput(map[string]map[string]string{
+					"surname": {value: "title"},
+				})
+				if err != nil {
+					return "", ErrNormalization
+				}
+				value = n["surname"]
+
+			case filter == "patronymic":
+				n, err := utils.NormalizeInput(map[string]map[string]string{
+					"patronymic": {value: "title"},
+				})
+				if err != nil {
+					return "", ErrNormalization
+				}
+				value = n["patronymic"]
 
 			case filter == "gender":
-				value = strings.ToLower(value)
+				n, err := utils.NormalizeInput(map[string]map[string]string{
+					"gender": {value: "lowercase"},
+				})
+				if err != nil {
+					return "", ErrNormalization
+				}
+				value = n["gender"]
 
 			case filter == "nationality":
-				value = strings.ToUpper(value)
+				n, err := utils.NormalizeInput(map[string]map[string]string{
+					"nationality": {value: "uppercase"},
+				})
+				if err != nil {
+					return "", ErrNormalization
+				}
+				value = n["nationality"]
 			}
 
 			where := fmt.Sprintf("%s='%s'", filter, value)
 
-			return fmt.Sprintf("SELECT * FROM %s WHERE %s LIMIT %v OFFSET %v;", config.Table, where, limit[1], limit[0])
+			return fmt.Sprintf("SELECT * FROM %s WHERE %s LIMIT %v OFFSET %v;", config.Table, where, limit[1], limit[0]), nil
 		}
 	}
 }
@@ -349,7 +417,10 @@ func (h Handlers) Select(id string, limit []int, filter string, value string) ([
 	}
 	defer tx.Rollback()
 
-	query := buildSelectQuery(id, limit, filter, value, h.config)
+	query, err := buildSelectQuery(id, limit, filter, value, h.config)
+	if err != nil {
+		return nil, err
+	}
 
 	r, err := tx.Query(query)
 	if err != nil {

@@ -347,12 +347,6 @@ type SelectRequest struct {
 	Filter Filter `json:"filter"`
 }
 
-type SelectResponse struct {
-	Status  int           `json:"status"`
-	Message string        `json:"message"`
-	Result  []storage.Row `json:"result"`
-}
-
 type Filter struct {
 	Type  string `json:"type"`
 	Value string `json:"value"`
@@ -366,6 +360,12 @@ var (
 	FilterGender      = "gender"
 	FilterNationality = "nationality"
 )
+
+type SelectResponse struct {
+	Status  int           `json:"status"`
+	Message string        `json:"message"`
+	Result  []storage.Row `json:"result"`
+}
 
 func (h Handlers) Select(c *fiber.Ctx) error {
 	const op = "effectivemobile.Select()"
