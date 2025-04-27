@@ -1,0 +1,20 @@
+name: TESTS
+on:
+  push:
+    branches:
+      - main
+      - dev
+jobs:
+  functional:
+    name: Functional Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Setup Golang
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.22.5'
+      - name: Run
+        run: |
+          go test -v --run _Functional ./tests
