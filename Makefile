@@ -27,8 +27,8 @@ TYPE ?= .
 test:
 	@case $(TYPE) in \
 		.) go test -v ./internal/tests ;; \
-		functional) go test -v -run _Functional ./internal/tests ;; \
-		integration) go test -v -run _Integration ./internal/tests ;; \
+		functional) go test -v -run _Functional ./tests ;; \
+		integration) go test -v -run _Integration ./tests ;; \
 	esac
 
 # GO ###
