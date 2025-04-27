@@ -3,10 +3,8 @@ package postgresql
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	_ "github.com/lib/pq"
 
@@ -15,9 +13,9 @@ import (
 )
 
 var (
-	ErrNoNewValues              = fmt.Errorf("в запросе не были предотавлены новые данные")
 	ErrNormalization            = fmt.Errorf("ошибка нормализации")
-	ErrConstraint               = fmt.Errorf("был нарушен check")
+	ErrConstraint               = fmt.Errorf("был нарушен constraint")
+	ErrNoNewValues              = fmt.Errorf("данные из запроса не отличаются от уже существующих в хранилище")
 	ErrOperationDidNotSuccessed = fmt.Errorf("операция не была выполнена")
 )
 
@@ -132,7 +130,9 @@ func (h Handlers) DeleteByID(id string) error {
 	}
 	defer tx.Rollback()
 
-	result, err := tx.Exec(fmt.Sprintf("DELETE FROM %s WHERE id=%s;", h.config.Table, id))
+	query := fmt.Sprintf("DELETE FROM %s WHERE id=$1;", h.config.Table)
+
+	result, err := tx.Exec(query, id)
 	if err != nil {
 		return err
 	}
@@ -155,7 +155,7 @@ func (h Handlers) DeleteByID(id string) error {
 	return tx.Commit()
 }
 
-func buildUpdateByIDQuery(id string, original []byte, update []byte, config config.PostgreSQLConfig) (string, error) {
+func buildUpdateByIDQuery(id string, original []byte, update []byte) ([]interface{}, error) {
 	const op = "utils.buildUpdateByIDQuery()"
 
 	var o Row
@@ -172,7 +172,7 @@ func buildUpdateByIDQuery(id string, original []byte, update []byte, config conf
 		"nationality": {u.Nationality: "uppercase"},
 	})
 	if err != nil {
-		return "", ErrNormalization
+		return nil, ErrNormalization
 	}
 
 	name := n["name"]
@@ -181,46 +181,56 @@ func buildUpdateByIDQuery(id string, original []byte, update []byte, config conf
 	gender := n["gender"]
 	nationality := n["nationality"]
 
-	count := 0
-	t := []string{}
+	changes := 0
+	args := []interface{}{}
 
 	if o.Name != name && name != "" {
-		t = append(t, fmt.Sprintf("name='%s'", name))
-		count++
+		args = append(args, name)
+		changes++
+	} else {
+		args = append(args, o.Name)
 	}
 
 	if o.Surname != surname && surname != "" {
-		t = append(t, fmt.Sprintf("surname='%s'", surname))
-		count++
+		args = append(args, surname)
+		changes++
+	} else {
+		args = append(args, o.Surname)
 	}
 
 	if o.Patronymic != patronymic && patronymic != "" {
-		t = append(t, fmt.Sprintf("patronymic='%s'", patronymic))
-		count++
+		args = append(args, patronymic)
+		changes++
+	} else {
+		args = append(args, o.Patronymic)
 	}
 
 	if o.Age != u.Age && u.Age != 0 {
-		t = append(t, fmt.Sprintf("age=%v", u.Age))
-		count++
+		args = append(args, u.Age)
+		changes++
+	} else {
+		args = append(args, o.Age)
 	}
 
 	if o.Gender != gender && gender != "" {
-		t = append(t, fmt.Sprintf("gender='%s'", gender))
-		count++
+		args = append(args, gender)
+		changes++
+	} else {
+		args = append(args, o.Gender)
 	}
 
 	if o.Nationality != nationality && nationality != "" {
-		t = append(t, fmt.Sprintf("nationality='%s'", nationality))
-		count++
+		args = append(args, nationality)
+		changes++
+	} else {
+		args = append(args, o.Nationality)
 	}
 
-	if count == 0 {
-		return "", ErrNoNewValues
+	if changes == 0 {
+		return nil, ErrNoNewValues
 	}
 
-	values := strings.Join(t, ", ")
-
-	return fmt.Sprintf("UPDATE %s SET %s WHERE id=%s;", config.Table, values, id), nil
+	return append(args, id), nil
 }
 
 func (h Handlers) UpdateByID(id string, data []byte) error {
@@ -238,7 +248,9 @@ func (h Handlers) UpdateByID(id string, data []byte) error {
 	}
 	defer tx.Rollback()
 
-	r := tx.QueryRow(fmt.Sprintf("SELECT name, surname, patronymic, age, gender, nationality FROM %s WHERE id=%s;", h.config.Table, id))
+	querySelect := fmt.Sprintf("SELECT name, surname, patronymic, age, gender, nationality FROM %s WHERE id=$1;", h.config.Table)
+
+	r := tx.QueryRow(querySelect, id)
 	if r.Err() != nil {
 		return r.Err()
 	}
@@ -255,17 +267,16 @@ func (h Handlers) UpdateByID(id string, data []byte) error {
 		return err
 	}
 
-	query, err := buildUpdateByIDQuery(id, originalByte, data, h.config)
+	args, err := buildUpdateByIDQuery(id, originalByte, data)
 	if err != nil {
-		if errors.Is(err, ErrNoNewValues) {
-			return ErrNoNewValues
-		}
 		return err
 	}
 
-	result, err := tx.Exec(query)
+	queryUpdate := fmt.Sprintf("UPDATE %s SET name=$1, surname=$2, patronymic=$3, age=$4, gender=$5, nationality=$6 WHERE id=$7;", h.config.Table)
+
+	result, err := tx.Exec(queryUpdate, args...)
 	if err != nil {
-		return ErrConstraint
+		return fmt.Errorf("%w:%v", ErrConstraint, err)
 	}
 
 	rowsAffected, err := result.RowsAffected()
@@ -318,7 +329,9 @@ func (h Handlers) Create(name string, surname string, patronymic string, age int
 	gender = n["gender"]
 	nationality = n["nationality"]
 
-	result, err := tx.Exec(fmt.Sprintf("INSERT INTO %s (name, surname, patronymic, age, gender, nationality) VALUES('%s', '%s', '%s', %v, '%s', '%s');", h.config.Table, name, surname, patronymic, age, gender, nationality))
+	query := fmt.Sprintf(fmt.Sprintf("INSERT INTO %s (name, surname, patronymic, age, gender, nationality) VALUES($1, $2, $3, $4, $5, $6);", h.config.Table))
+
+	result, err := tx.Exec(query, name, surname, patronymic, age, gender, nationality)
 	if err != nil {
 		return err
 	}
@@ -341,12 +354,14 @@ func (h Handlers) Create(name string, surname string, patronymic string, age int
 	return tx.Commit()
 }
 
-func buildSelectQuery(id string, limit []int, filter string, value string, config config.PostgreSQLConfig) (string, error) {
+func buildSelectQuery(id string, limit []int, filter string, value string, config config.PostgreSQLConfig) (string, []interface{}, error) {
+	args := []interface{}{}
+
 	if id != "" {
-		return fmt.Sprintf("SELECT * FROM %s WHERE id=%s;", config.Table, id), nil
+		return fmt.Sprintf("SELECT * FROM %s WHERE id=$1;", config.Table), append(args, id), nil
 	} else {
 		if filter == "" {
-			return fmt.Sprintf("SELECT * FROM %s LIMIT %v OFFSET %v;", config.Table, limit[1], limit[0]), nil
+			return fmt.Sprintf("SELECT * FROM %s ORDER BY id LIMIT $1 OFFSET $2;", config.Table), append(args, limit[1], limit[0]), nil
 		} else {
 			switch {
 			case filter == "name":
@@ -354,7 +369,7 @@ func buildSelectQuery(id string, limit []int, filter string, value string, confi
 					"name": {value: "title"},
 				})
 				if err != nil {
-					return "", ErrNormalization
+					return "", nil, ErrNormalization
 				}
 				value = n["name"]
 
@@ -363,7 +378,7 @@ func buildSelectQuery(id string, limit []int, filter string, value string, confi
 					"surname": {value: "title"},
 				})
 				if err != nil {
-					return "", ErrNormalization
+					return "", nil, ErrNormalization
 				}
 				value = n["surname"]
 
@@ -372,7 +387,7 @@ func buildSelectQuery(id string, limit []int, filter string, value string, confi
 					"patronymic": {value: "title"},
 				})
 				if err != nil {
-					return "", ErrNormalization
+					return "", nil, ErrNormalization
 				}
 				value = n["patronymic"]
 
@@ -381,7 +396,7 @@ func buildSelectQuery(id string, limit []int, filter string, value string, confi
 					"gender": {value: "lowercase"},
 				})
 				if err != nil {
-					return "", ErrNormalization
+					return "", nil, ErrNormalization
 				}
 				value = n["gender"]
 
@@ -390,14 +405,12 @@ func buildSelectQuery(id string, limit []int, filter string, value string, confi
 					"nationality": {value: "uppercase"},
 				})
 				if err != nil {
-					return "", ErrNormalization
+					return "", nil, ErrNormalization
 				}
 				value = n["nationality"]
 			}
 
-			where := fmt.Sprintf("%s='%s'", filter, value)
-
-			return fmt.Sprintf("SELECT * FROM %s WHERE %s LIMIT %v OFFSET %v;", config.Table, where, limit[1], limit[0]), nil
+			return fmt.Sprintf("SELECT * FROM %s WHERE %s=$1 ORDER BY id LIMIT $2 OFFSET $3;", config.Table, filter), append(args, value, limit[1], limit[0]), nil
 		}
 	}
 }
@@ -417,12 +430,12 @@ func (h Handlers) Select(id string, limit []int, filter string, value string) ([
 	}
 	defer tx.Rollback()
 
-	query, err := buildSelectQuery(id, limit, filter, value, h.config)
+	query, args, err := buildSelectQuery(id, limit, filter, value, h.config)
 	if err != nil {
 		return nil, err
 	}
 
-	r, err := tx.Query(query)
+	r, err := tx.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}

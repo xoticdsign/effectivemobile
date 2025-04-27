@@ -499,10 +499,7 @@ func (h Handlers) Select(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	filters := map[string]bool{
-		FilterName: true, FilterSurname: true, FilterPatronymic: true,
-		FilterAge: true, FilterGender: true, FilterNationality: true,
-	}
+	filters := map[string]bool{FilterName: true, FilterSurname: true, FilterPatronymic: true, FilterAge: true, FilterGender: true, FilterNationality: true}
 
 	if filter != "" && !filters[filter] {
 		h.Log.Debug(
