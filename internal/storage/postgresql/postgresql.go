@@ -98,13 +98,13 @@ func (s *Storage) Shutdown() error {
 }
 
 type Row struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Surname     string `json:"surname"`
-	Patronymic  string `json:"patronymic"`
-	Age         int    `json:"age"`
-	Gender      string `json:"gender"`
-	Nationality string `json:"nationality"`
+	ID          int    `json:"id" example:"1"`
+	Name        string `json:"name" example:"Ivan"`
+	Surname     string `json:"surname" example:"Petrov"`
+	Patronymic  string `json:"patronymic" example:"Ivanovich"`
+	Age         int    `json:"age" example:"21"`
+	Gender      string `json:"gender" example:"male"`
+	Nationality string `json:"nationality" example:"RU"`
 }
 
 type Handlers struct {

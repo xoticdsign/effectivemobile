@@ -2,41 +2,88 @@ basePath: /
 consumes:
 - application/json
 definitions:
+  effectivemobile.BadRequestResponse:
+    properties:
+      code:
+        example: 400
+        type: integer
+      message:
+        example: Bad Request
+        type: string
+    type: object
+  effectivemobile.ConflictResponse:
+    properties:
+      code:
+        example: 409
+        type: integer
+      message:
+        example: Conflict
+        type: string
+    type: object
   effectivemobile.CreateRequest:
     properties:
       name:
+        example: Ivan
         type: string
       patronymic:
+        example: Ivanovich
         type: string
       surname:
+        example: Petrov
         type: string
     type: object
   effectivemobile.CreateResponse:
     properties:
       code:
+        example: 200
         type: integer
       message:
+        example: entity has been created
         type: string
     type: object
   effectivemobile.DeleteByIDResponse:
     properties:
       code:
+        example: 200
         type: integer
       message:
+        example: entity has been deleted
         type: string
     type: object
-  effectivemobile.ErrorResponse:
+  effectivemobile.InternalServerErrorResponse:
     properties:
       code:
+        example: 500
         type: integer
       message:
+        example: Internal Server Error
+        type: string
+    type: object
+  effectivemobile.MethodNotAllowedResponse:
+    properties:
+      code:
+        example: 405
+        type: integer
+      message:
+        example: Method Not Allowed
+        type: string
+    type: object
+  effectivemobile.NotFoundResponse:
+    properties:
+      code:
+        example: 404
+        type: integer
+      message:
+        example: Not Found
         type: string
     type: object
   effectivemobile.SelectResponse:
     properties:
       code:
+        example: 200
         type: integer
       message:
+        example: entity(ies) found
         type: string
       result:
         items:
@@ -46,40 +93,55 @@ definitions:
   effectivemobile.UpdateByIDRequest:
     properties:
       age:
+        example: 21
         type: integer
       gender:
+        example: male
         type: string
       name:
+        example: Ivan
         type: string
       nationality:
+        example: RU
         type: string
       patronymic:
+        example: Ivanovich
         type: string
       surname:
+        example: Petrov
         type: string
     type: object
   effectivemobile.UpdateByIDResponse:
     properties:
       code:
+        example: 200
         type: integer
       message:
+        example: entity has been updated
         type: string
     type: object
   postgresql.Row:
     properties:
       age:
+        example: 21
         type: integer
       gender:
+        example: male
         type: string
       id:
+        example: 1
         type: integer
       name:
+        example: Ivan
         type: string
       nationality:
+        example: RU
         type: string
       patronymic:
+        example: Ivanovich
         type: string
       surname:
+        example: Petrov
         type: string
     type: object
 host: localhost:8080
@@ -118,21 +180,21 @@ paths:
         "400":
           description: Возвращается, если запрос был сформирован неправильно
           schema:
-            $ref: '#/definitions/effectivemobile.ErrorResponse'
+            $ref: '#/definitions/effectivemobile.BadRequestResponse'
         "404":
           description: Возвращается, если запрашиваемая запись не была найдена/во
             внешних API нет данных
           schema:
-            $ref: '#/definitions/effectivemobile.ErrorResponse'
+            $ref: '#/definitions/effectivemobile.NotFoundResponse'
         "405":
           description: Возвращается, если был использован неправильный метод
           schema:
-            $ref: '#/definitions/effectivemobile.ErrorResponse'
+            $ref: '#/definitions/effectivemobile.MethodNotAllowedResponse'
         "500":
           description: Возвращается, если во время работы хранилища/клиента произошла
             ошибка
           schema:
-            $ref: '#/definitions/effectivemobile.ErrorResponse'
+            $ref: '#/definitions/effectivemobile.InternalServerErrorResponse'
       summary: Создание записи
       tags:
       - Операции
@@ -156,19 +218,19 @@ paths:
         "400":
           description: Возвращается, если запрос был сформирован неправильно
           schema:
-            $ref: '#/definitions/effectivemobile.ErrorResponse'
+            $ref: '#/definitions/effectivemobile.BadRequestResponse'
         "404":
           description: Возвращается, если запрашиваемая запись не была найдена
           schema:
-            $ref: '#/definitions/effectivemobile.ErrorResponse'
+            $ref: '#/definitions/effectivemobile.NotFoundResponse'
         "405":
           description: Возвращается, если был использован неправильный метод
           schema:
-            $ref: '#/definitions/effectivemobile.ErrorResponse'
+            $ref: '#/definitions/effectivemobile.MethodNotAllowedResponse'
         "500":
           description: Возвращается, если во время работы хранилища произошла ошибка
           schema:
-            $ref: '#/definitions/effectivemobile.ErrorResponse'
+            $ref: '#/definitions/effectivemobile.InternalServerErrorResponse'
       summary: Удаление записи по ID
       tags:
       - Операции
@@ -207,19 +269,19 @@ paths:
         "400":
           description: Возвращается, если запрос был сформирован неправильно
           schema:
-            $ref: '#/definitions/effectivemobile.ErrorResponse'
+            $ref: '#/definitions/effectivemobile.BadRequestResponse'
         "404":
           description: Возвращается, если запрашиваемая запись(и) не была найдена
           schema:
-            $ref: '#/definitions/effectivemobile.ErrorResponse'
+            $ref: '#/definitions/effectivemobile.NotFoundResponse'
         "405":
           description: Возвращается, если был использован неправильный метод
           schema:
-            $ref: '#/definitions/effectivemobile.ErrorResponse'
+            $ref: '#/definitions/effectivemobile.MethodNotAllowedResponse'
         "500":
           description: Возвращается, если во время работы хранилища произошла ошибка
           schema:
-            $ref: '#/definitions/effectivemobile.ErrorResponse'
+            $ref: '#/definitions/effectivemobile.InternalServerErrorResponse'
       summary: Получение записи(ей)
       tags:
       - Операции
@@ -250,24 +312,24 @@ paths:
         "400":
           description: Возвращается, если запрос был сформирован неправильно
           schema:
-            $ref: '#/definitions/effectivemobile.ErrorResponse'
+            $ref: '#/definitions/effectivemobile.BadRequestResponse'
         "404":
           description: Возвращается, если запрашиваемая запись не была найдена
           schema:
-            $ref: '#/definitions/effectivemobile.ErrorResponse'
+            $ref: '#/definitions/effectivemobile.NotFoundResponse'
         "405":
           description: Возвращается, если был использован неправильный метод
           schema:
-            $ref: '#/definitions/effectivemobile.ErrorResponse'
+            $ref: '#/definitions/effectivemobile.MethodNotAllowedResponse'
         "409":
           description: Возвращается, если переданные данные ничем не отличаются от
             уже существующих
           schema:
-            $ref: '#/definitions/effectivemobile.ErrorResponse'
+            $ref: '#/definitions/effectivemobile.ConflictResponse'
         "500":
           description: Возвращается, если во время работы хранилища произошла ошибка
           schema:
-            $ref: '#/definitions/effectivemobile.ErrorResponse'
+            $ref: '#/definitions/effectivemobile.InternalServerErrorResponse'
       summary: Обновление записи по ID
       tags:
       - Операции

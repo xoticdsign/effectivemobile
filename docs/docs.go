@@ -62,25 +62,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Возвращается, если запрос был сформирован неправильно",
                         "schema": {
-                            "$ref": "#/definitions/effectivemobile.ErrorResponse"
+                            "$ref": "#/definitions/effectivemobile.BadRequestResponse"
                         }
                     },
                     "404": {
                         "description": "Возвращается, если запрашиваемая запись не была найдена/во внешних API нет данных",
                         "schema": {
-                            "$ref": "#/definitions/effectivemobile.ErrorResponse"
+                            "$ref": "#/definitions/effectivemobile.NotFoundResponse"
                         }
                     },
                     "405": {
                         "description": "Возвращается, если был использован неправильный метод",
                         "schema": {
-                            "$ref": "#/definitions/effectivemobile.ErrorResponse"
+                            "$ref": "#/definitions/effectivemobile.MethodNotAllowedResponse"
                         }
                     },
                     "500": {
                         "description": "Возвращается, если во время работы хранилища/клиента произошла ошибка",
                         "schema": {
-                            "$ref": "#/definitions/effectivemobile.ErrorResponse"
+                            "$ref": "#/definitions/effectivemobile.InternalServerErrorResponse"
                         }
                     }
                 }
@@ -116,25 +116,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Возвращается, если запрос был сформирован неправильно",
                         "schema": {
-                            "$ref": "#/definitions/effectivemobile.ErrorResponse"
+                            "$ref": "#/definitions/effectivemobile.BadRequestResponse"
                         }
                     },
                     "404": {
                         "description": "Возвращается, если запрашиваемая запись не была найдена",
                         "schema": {
-                            "$ref": "#/definitions/effectivemobile.ErrorResponse"
+                            "$ref": "#/definitions/effectivemobile.NotFoundResponse"
                         }
                     },
                     "405": {
                         "description": "Возвращается, если был использован неправильный метод",
                         "schema": {
-                            "$ref": "#/definitions/effectivemobile.ErrorResponse"
+                            "$ref": "#/definitions/effectivemobile.MethodNotAllowedResponse"
                         }
                     },
                     "500": {
                         "description": "Возвращается, если во время работы хранилища произошла ошибка",
                         "schema": {
-                            "$ref": "#/definitions/effectivemobile.ErrorResponse"
+                            "$ref": "#/definitions/effectivemobile.InternalServerErrorResponse"
                         }
                     }
                 }
@@ -193,25 +193,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Возвращается, если запрос был сформирован неправильно",
                         "schema": {
-                            "$ref": "#/definitions/effectivemobile.ErrorResponse"
+                            "$ref": "#/definitions/effectivemobile.BadRequestResponse"
                         }
                     },
                     "404": {
                         "description": "Возвращается, если запрашиваемая запись(и) не была найдена",
                         "schema": {
-                            "$ref": "#/definitions/effectivemobile.ErrorResponse"
+                            "$ref": "#/definitions/effectivemobile.NotFoundResponse"
                         }
                     },
                     "405": {
                         "description": "Возвращается, если был использован неправильный метод",
                         "schema": {
-                            "$ref": "#/definitions/effectivemobile.ErrorResponse"
+                            "$ref": "#/definitions/effectivemobile.MethodNotAllowedResponse"
                         }
                     },
                     "500": {
                         "description": "Возвращается, если во время работы хранилища произошла ошибка",
                         "schema": {
-                            "$ref": "#/definitions/effectivemobile.ErrorResponse"
+                            "$ref": "#/definitions/effectivemobile.InternalServerErrorResponse"
                         }
                     }
                 }
@@ -256,31 +256,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Возвращается, если запрос был сформирован неправильно",
                         "schema": {
-                            "$ref": "#/definitions/effectivemobile.ErrorResponse"
+                            "$ref": "#/definitions/effectivemobile.BadRequestResponse"
                         }
                     },
                     "404": {
                         "description": "Возвращается, если запрашиваемая запись не была найдена",
                         "schema": {
-                            "$ref": "#/definitions/effectivemobile.ErrorResponse"
+                            "$ref": "#/definitions/effectivemobile.NotFoundResponse"
                         }
                     },
                     "405": {
                         "description": "Возвращается, если был использован неправильный метод",
                         "schema": {
-                            "$ref": "#/definitions/effectivemobile.ErrorResponse"
+                            "$ref": "#/definitions/effectivemobile.MethodNotAllowedResponse"
                         }
                     },
                     "409": {
                         "description": "Возвращается, если переданные данные ничем не отличаются от уже существующих",
                         "schema": {
-                            "$ref": "#/definitions/effectivemobile.ErrorResponse"
+                            "$ref": "#/definitions/effectivemobile.ConflictResponse"
                         }
                     },
                     "500": {
                         "description": "Возвращается, если во время работы хранилища произошла ошибка",
                         "schema": {
-                            "$ref": "#/definitions/effectivemobile.ErrorResponse"
+                            "$ref": "#/definitions/effectivemobile.InternalServerErrorResponse"
                         }
                     }
                 }
@@ -288,17 +288,46 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "effectivemobile.BadRequestResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 400
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Bad Request"
+                }
+            }
+        },
+        "effectivemobile.ConflictResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 409
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Conflict"
+                }
+            }
+        },
         "effectivemobile.CreateRequest": {
             "type": "object",
             "properties": {
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Ivan"
                 },
                 "patronymic": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Ivanovich"
                 },
                 "surname": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Petrov"
                 }
             }
         },
@@ -306,10 +335,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "code": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 200
                 },
                 "message": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "entity has been created"
                 }
             }
         },
@@ -317,21 +348,51 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "code": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 200
                 },
                 "message": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "entity has been deleted"
                 }
             }
         },
-        "effectivemobile.ErrorResponse": {
+        "effectivemobile.InternalServerErrorResponse": {
             "type": "object",
             "properties": {
                 "code": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 500
                 },
                 "message": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Internal Server Error"
+                }
+            }
+        },
+        "effectivemobile.MethodNotAllowedResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 405
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Method Not Allowed"
+                }
+            }
+        },
+        "effectivemobile.NotFoundResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 404
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Not Found"
                 }
             }
         },
@@ -339,10 +400,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "code": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 200
                 },
                 "message": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "entity(ies) found"
                 },
                 "result": {
                     "type": "array",
@@ -356,22 +419,28 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "age": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 21
                 },
                 "gender": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "male"
                 },
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Ivan"
                 },
                 "nationality": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "RU"
                 },
                 "patronymic": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Ivanovich"
                 },
                 "surname": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Petrov"
                 }
             }
         },
@@ -379,10 +448,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "code": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 200
                 },
                 "message": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "entity has been updated"
                 }
             }
         },
@@ -390,25 +461,32 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "age": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 21
                 },
                 "gender": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "male"
                 },
                 "id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 },
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Ivan"
                 },
                 "nationality": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "RU"
                 },
                 "patronymic": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Ivanovich"
                 },
                 "surname": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Petrov"
                 }
             }
         }

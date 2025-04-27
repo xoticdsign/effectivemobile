@@ -117,12 +117,12 @@ func (a *App) Run() error {
 func (a *App) Shutdown() error {
 	const op = "effectivemobile.Shutdown()"
 
+	a.Client.Shutdown()
+
 	err := a.Server.Implementation.Shutdown()
 	if err != nil {
 		return err
 	}
-
-	a.Client.Shutdown()
 
 	return nil
 }
@@ -142,14 +142,34 @@ type Handlers struct {
 	Config  config.EffectiveMobileConfig
 }
 
-type ErrorResponse struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+type BadRequestResponse struct {
+	Code    int    `json:"code" example:"400"`
+	Message string `json:"message" example:"Bad Request"`
+}
+
+type NotFoundResponse struct {
+	Code    int    `json:"code" example:"404"`
+	Message string `json:"message" example:"Not Found"`
+}
+
+type MethodNotAllowedResponse struct {
+	Code    int    `json:"code" example:"405"`
+	Message string `json:"message" example:"Method Not Allowed"`
+}
+
+type ConflictResponse struct {
+	Code    int    `json:"code" example:"409"`
+	Message string `json:"message" example:"Conflict"`
+}
+
+type InternalServerErrorResponse struct {
+	Code    int    `json:"code" example:"500"`
+	Message string `json:"message" example:"Internal Server Error"`
 }
 
 type DeleteByIDResponse struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+	Code    int    `json:"code" example:"200"`
+	Message string `json:"message" example:"entity has been deleted"`
 }
 
 // @description Удаляет запись из базы данных по заданному идентификатору.
@@ -159,12 +179,12 @@ type DeleteByIDResponse struct {
 //
 // @summary     Удаление записи по ID
 // @produce     json
-// @param       id  path     string             true "Идентификатор записи"
-// @success     200 {object} DeleteByIDResponse "Возвращается, если удаление прошло успешно"
-// @failure     400 {object} ErrorResponse      "Возвращается, если запрос был сформирован неправильно"
-// @failure     404 {object} ErrorResponse      "Возвращается, если запрашиваемая запись не была найдена"
-// @failure     405 {object} ErrorResponse      "Возвращается, если был использован неправильный метод"
-// @failure     500 {object} ErrorResponse      "Возвращается, если во время работы хранилища произошла ошибка"
+// @param       id  path     string                      true "Идентификатор записи"
+// @success     200 {object} DeleteByIDResponse          "Возвращается, если удаление прошло успешно"
+// @failure     400 {object} BadRequestResponse          "Возвращается, если запрос был сформирован неправильно"
+// @failure     404 {object} NotFoundResponse            "Возвращается, если запрашиваемая запись не была найдена"
+// @failure     405 {object} MethodNotAllowedResponse    "Возвращается, если был использован неправильный метод"
+// @failure     500 {object} InternalServerErrorResponse "Возвращается, если во время работы хранилища произошла ошибка"
 // @router      /delete/{id} [delete]
 func (h Handlers) DeleteByID(c *fiber.Ctx) error {
 	const op = "effectivemobile.DeleteByID()"
@@ -211,17 +231,17 @@ func (h Handlers) DeleteByID(c *fiber.Ctx) error {
 }
 
 type UpdateByIDRequest struct {
-	Name        string `json:"name"`
-	Surname     string `json:"surname"`
-	Patronymic  string `json:"patronymic"`
-	Age         int    `json:"age"`
-	Gender      string `json:"gender"`
-	Nationality string `json:"nationality"`
+	Name        string `json:"name" example:"Ivan"`
+	Surname     string `json:"surname" example:"Petrov"`
+	Patronymic  string `json:"patronymic" example:"Ivanovich"`
+	Age         int    `json:"age" example:"21"`
+	Gender      string `json:"gender" example:"male"`
+	Nationality string `json:"nationality" example:"RU"`
 }
 
 type UpdateByIDResponse struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+	Code    int    `json:"code" example:"200"`
+	Message string `json:"message" example:"entity has been updated"`
 }
 
 // @description Обновляет существующую записи в базе данных по ID при помощи данных получаемых в теле запроса.
@@ -231,14 +251,14 @@ type UpdateByIDResponse struct {
 //
 // @summary     Обновление записи по ID
 // @produce     json
-// @param       id   path     string             true "Идентификатор записи"
-// @param       body body     UpdateByIDRequest  true "Тело запроса"
-// @success     200  {object} UpdateByIDResponse "Возвращается, если обновление прошло успешно"
-// @failure     400  {object} ErrorResponse      "Возвращается, если запрос был сформирован неправильно"
-// @failure     404  {object} ErrorResponse      "Возвращается, если запрашиваемая запись не была найдена"
-// @failure     405  {object} ErrorResponse      "Возвращается, если был использован неправильный метод"
-// @failure     409  {object} ErrorResponse      "Возвращается, если переданные данные ничем не отличаются от уже существующих"
-// @failure     500  {object} ErrorResponse      "Возвращается, если во время работы хранилища произошла ошибка"
+// @param       id   path     string                      true "Идентификатор записи"
+// @param       body body     UpdateByIDRequest           true "Тело запроса"
+// @success     200  {object} UpdateByIDResponse          "Возвращается, если обновление прошло успешно"
+// @failure     400  {object} BadRequestResponse          "Возвращается, если запрос был сформирован неправильно"
+// @failure     404  {object} NotFoundResponse            "Возвращается, если запрашиваемая запись не была найдена"
+// @failure     405  {object} MethodNotAllowedResponse    "Возвращается, если был использован неправильный метод"
+// @failure     409  {object} ConflictResponse            "Возвращается, если переданные данные ничем не отличаются от уже существующих"
+// @failure     500  {object} InternalServerErrorResponse "Возвращается, если во время работы хранилища произошла ошибка"
 // @router      /update/{id} [put]
 func (h Handlers) UpdateByID(c *fiber.Ctx) error {
 	const op = "effectivemobile.UpdateByID()"
@@ -304,14 +324,14 @@ func (h Handlers) UpdateByID(c *fiber.Ctx) error {
 }
 
 type CreateRequest struct {
-	Name       string `json:"name"`
-	Surname    string `json:"surname"`
-	Patronymic string `json:"patronymic"`
+	Name       string `json:"name" example:"Ivan"`
+	Surname    string `json:"surname" example:"Petrov"`
+	Patronymic string `json:"patronymic" example:"Ivanovich"`
 }
 
 type CreateResponse struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+	Code    int    `json:"code" example:"200"`
+	Message string `json:"message" example:"entity has been created"`
 }
 
 // @description Создает новую запись с автозаполнением возраста, пола и национальности при помощи открытых API.
@@ -321,15 +341,15 @@ type CreateResponse struct {
 //
 // @summary     Создание записи
 // @produce     json
-// @param       body body     CreateRequest  true "Тело запроса"
-// @success     200  {object} CreateResponse "Возвращается, если создание прошло успешно"
-// @failure     400    {object} ErrorResponse  "Возвращается, если запрос был сформирован неправильно"
-// @failure     404  {object} ErrorResponse  "Возвращается, если запрашиваемая запись не была найдена/во внешних API нет данных"
-// @failure     405    {object} ErrorResponse  "Возвращается, если был использован неправильный метод"
-// @failure     500  {object} ErrorResponse  "Возвращается, если во время работы хранилища/клиента произошла ошибка"
+// @param       body body     CreateRequest               true "Тело запроса"
+// @success     200  {object} CreateResponse              "Возвращается, если создание прошло успешно"
+// @failure     400  {object} BadRequestResponse          "Возвращается, если запрос был сформирован неправильно"
+// @failure     404  {object} NotFoundResponse            "Возвращается, если запрашиваемая запись не была найдена/во внешних API нет данных"
+// @failure     405  {object} MethodNotAllowedResponse    "Возвращается, если был использован неправильный метод"
+// @failure     500  {object} InternalServerErrorResponse "Возвращается, если во время работы хранилища/клиента произошла ошибка"
 // @router      /create [post]
 func (h Handlers) Create(c *fiber.Ctx) error {
-	const op = "effectivemobile.UpdateByID()"
+	const op = "effectivemobile.Create()"
 
 	var body CreateRequest
 
@@ -345,18 +365,7 @@ func (h Handlers) Create(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	if body.Name == "" {
-		h.Log.Debug(
-			"неправильно сформирован запрос",
-			slog.String("source", source),
-			slog.String("op", op),
-			slog.Any("error", err),
-		)
-
-		return fiber.ErrBadRequest
-	}
-
-	if body.Surname == "" {
+	if body.Name == "" || body.Surname == "" {
 		h.Log.Debug(
 			"неправильно сформирован запрос",
 			slog.String("source", source),
@@ -409,8 +418,8 @@ var (
 )
 
 type SelectResponse struct {
-	Code    int           `json:"code"`
-	Message string        `json:"message"`
+	Code    int           `json:"code" example:"200"`
+	Message string        `json:"message" example:"entity(ies) found"`
 	Result  []storage.Row `json:"result"`
 }
 
@@ -421,16 +430,16 @@ type SelectResponse struct {
 //
 // @summary     Получение записи(ей)
 // @produce     json
-// @param       id     query    string         false "Идентификатор записи"
-// @param       filter query    string         false "Тип фильтра (name, surname, etc.)"
-// @param       value  query    string         false "Значение фильтра"
-// @param       start  query    int            false "Начальная позиция"
-// @param       end    query    int            false "Конечная позиция"
-// @success     200    {object} SelectResponse "Возвращается, если получение прошло успешно"
-// @failure     400  {object} ErrorResponse  "Возвращается, если запрос был сформирован неправильно"
-// @failure     404    {object} ErrorResponse  "Возвращается, если запрашиваемая запись(и) не была найдена"
-// @failure     405  {object} ErrorResponse  "Возвращается, если был использован неправильный метод"
-// @failure     500    {object} ErrorResponse  "Возвращается, если во время работы хранилища произошла ошибка"
+// @param       id     query    string                      false "Идентификатор записи"
+// @param       filter query    string                      false "Тип фильтра (name, surname, etc.)"
+// @param       value  query    string                      false "Значение фильтра"
+// @param       start  query    int                         false "Начальная позиция"
+// @param       end    query    int                         false "Конечная позиция"
+// @success     200    {object} SelectResponse              "Возвращается, если получение прошло успешно"
+// @failure     400    {object} BadRequestResponse          "Возвращается, если запрос был сформирован неправильно"
+// @failure     404    {object} NotFoundResponse            "Возвращается, если запрашиваемая запись(и) не была найдена"
+// @failure     405    {object} MethodNotAllowedResponse    "Возвращается, если был использован неправильный метод"
+// @failure     500    {object} InternalServerErrorResponse "Возвращается, если во время работы хранилища произошла ошибка"
 // @router      /select [get]
 func (h Handlers) Select(c *fiber.Ctx) error {
 	const op = "effectivemobile.Select()"
@@ -447,12 +456,12 @@ func (h Handlers) Select(c *fiber.Ctx) error {
 	start := c.QueryInt("start", 0)
 	end := c.QueryInt("end", h.Config.SelectLimit)
 
-	if start >= end {
+	if start >= end || start < 0 {
 		h.Log.Debug(
 			"неправильно сформирован запрос",
 			slog.String("source", source),
 			slog.String("op", op),
-			slog.Any("error", "start parameter can't be greater than the end"),
+			slog.Any("error", "start parameter can't be greater than the end and can't be less then zero"),
 		)
 
 		return fiber.ErrBadRequest
